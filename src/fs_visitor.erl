@@ -10,7 +10,7 @@
 % Todo - Save UID/Cookie
 % Be given a function to apply to file.
 %
--module(fs_client).
+-module(fs_visitor).
 -author("raballa@sandia.gov").
 -vsn("1.0").
 
