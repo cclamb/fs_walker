@@ -1,0 +1,142 @@
+Erlang R13B04 (erts-5.7.5) [source] [64-bit] [smp:2:2] [rq:2] [async-threads:0] [hipe] [kernel-poll:false]
+
+Eshell V5.7.5  (abort with ^G)
+1> c(event_mgr).
+./event_mgr.erl:64: function event/2 undefined
+error
+2> c(event_mgr)
+2> c(io_handler).
+* 2: syntax error before: c
+2> 
+2> c(event_mgr).
+./event_mgr.erl:8: badly formed 'include'
+./event_mgr.erl:81: variable 'NState' is unbound
+./event_mgr.erl:79: Warning: variable 'NewState' is unused
+error
+3> c(event).
+./event.erl:none: no such file or directory
+error
+4> c(event_mgr).
+./event_mgr.erl:81: variable 'NState' is unbound
+./event_mgr.erl:79: Warning: variable 'NewState' is unused
+error
+5> c(event_mgr).
+{ok,event_mgr}
+6> 
+./io_handler.erl:3: badly formed 'include'
+./io_handler.erl:10: syntax error before: '('
+./io_handler.erl:2: function handle_event/2 undefined
+./io_handler.erl:20: Warning: function print/4 is unused
+./io_handler.erl:25: Warning: function fmt/1 is unused
+./io_handler.erl:31: Warning: function pad/1 is unused
+error
+7> oc(io_handler).
+./io_handler.erl:3: badly formed 'include_lib'
+./io_handler.erl:10: syntax error before: '('
+./io_handler.erl:2: function handle_event/2 undefined
+./io_handler.erl:20: Warning: function print/4 is unused
+./io_handler.erl:25: Warning: function fmt/1 is unused
+./io_handler.erl:31: Warning: function pad/1 is unused
+error
+8> c(io_handler).
+./io_handler.erl:4: badly formed 'include_lib'
+./io_handler.erl:11: syntax error before: '('
+./io_handler.erl:2: function handle_event/2 undefined
+./io_handler.erl:21: Warning: function print/4 is unused
+./io_handler.erl:26: Warning: function fmt/1 is unused
+./io_handler.erl:32: Warning: function pad/1 is unused
+error
+9> c(io_handler).
+./io_handler.erl:11: syntax error before: '('
+./io_handler.erl:2: function handle_event/2 undefined
+./io_handler.erl:21: Warning: function print/4 is unused
+./io_handler.erl:26: Warning: function fmt/1 is unused
+./io_handler.erl:32: Warning: function pad/1 is unused
+error
+10> c(io_handler).
+./io_handler.erl:11: record event undefined
+./io_handler.erl:12: variable 'Alarm' is unbound
+./io_handler.erl:12: variable 'Id' is unbound
+./io_handler.erl:15: record event undefined
+./io_handler.erl:16: variable 'Alarm' is unbound
+./io_handler.erl:16: variable 'Id' is unbound
+error
+11> c(io_handler).
+{ok,io_handler}
+12> 
+./io_handler.erl:4: badly formed 'include'
+./io_handler.erl:12: record event undefined
+./io_handler.erl:13: variable 'Alarm' is unbound
+./io_handler.erl:13: variable 'Id' is unbound
+./io_handler.erl:16: record event undefined
+./io_handler.erl:17: variable 'Alarm' is unbound
+./io_handler.erl:17: variable 'Id' is unbound
+error
+13> c(io_handler).
+./io_handler.erl:4: badly formed 'include'
+./io_handler.erl:13: record event undefined
+./io_handler.erl:14: variable 'Alarm' is unbound
+./io_handler.erl:14: variable 'Id' is unbound
+./io_handler.erl:17: record event undefined
+./io_handler.erl:18: variable 'Alarm' is unbound
+./io_handler.erl:18: variable 'Id' is unbound
+error
+14> c(io_handler).
+./io_handler.erl:4: can't find include file "event"
+./io_handler.erl:13: record event undefined
+./io_handler.erl:14: variable 'Alarm' is unbound
+./io_handler.erl:14: variable 'Id' is unbound
+./io_handler.erl:17: record event undefined
+./io_handler.erl:18: variable 'Alarm' is unbound
+./io_handler.erl:18: variable 'Id' is unbound
+error
+15> c(io_handler).
+{ok,io_handler}
+16> 
+* 1: variable 'Fred' is unbound
+17> 
+
+=ERROR REPORT==== 31-Jul-2010::18:23:13 ===
+Error in process <0.102.0> with exit value: {function_clause,[{event_mgr,initialize,[[io_handler]]},{event_mgr,init,1}]}
+
+** exception error: bad argument
+     in function  register/2
+        called as register("emgr",<0.102.0>)
+     in call from event_mgr:start/2
+18> oevent_mgr:start(emgr, [io_handler]).
+ok
+19> 
+=ERROR REPORT==== 31-Jul-2010::18:23:37 ===
+Error in process <0.105.0> with exit value: {function_clause,[{event_mgr,initialize,[[io_handler]]},{event_mgr,init,1}]}
+
+
+19> c
+./event_mgr.erl:8: can't find include file "event"
+error
+20> c(event_mgr).
+{ok,event_mgr}
+21> event_mgr:start(emgr, []).
+ok
+22> event_mgr:add_handler(emgr, io_handler, 0).
+ok
+23> 
+* 1: record event undefined
+24> -rr("event.hrl").
+** exception error: bad argument in an arithmetic expression
+     in operator  -/1
+        called as - [event]
+25> 
+** exception error: undefined shell command record/2
+26> -rr(event, {action, id, alarm, sender}).
+** exception error: bad argument in an arithmetic expression
+     in operator  -/1
+        called as - {error,nofile}
+27> 
+27> 
+* 2: syntax error before: event_mgr
+27> rr("event.hrl").
+[event]
+28> event_mgr:send_event(emgr, #event{action=raise_alarm, id=47, alarm="Too hot"}).
+#0, 2010:7:31 18:29:17, alarm,47, "Too hot"
+ok
+29> 
