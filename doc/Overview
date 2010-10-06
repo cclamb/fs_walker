@@ -1,0 +1,10 @@
+fs_event: wrapper to gen_event code.
+fs_event_logger - event handler
+
+worker_sup: supervisor for workers
+
+worker: client code
+
+server: worklist server
+server_sup: server supervisor
+
