@@ -41,4 +41,3 @@ info_message(Msg, Args) ->  gen_event:notify(?SERVER, {info, Msg, Args}).
 warning_message(Msg, Args) ->  gen_event:notify(?SERVER, {warning, Msg, Args}).
 error_message(Msg, Args) ->  gen_event:notify(?SERVER, {error, Msg, Args}).
 
-
