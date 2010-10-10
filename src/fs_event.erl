@@ -2,7 +2,7 @@
 -module(fs_event).
 -export([start_link/0, add_handler/2,
          work_added/1, spurious_complete/1,
-         file_error/1, directory_error/1,
+         file_error/2, directory_error/1,
          access_timeout/1, orphan_died/0, orphan_died/1,
          worker_died/1, visit_update/1,
          info_message/2, warning_message/2, error_message/2]).
@@ -29,7 +29,8 @@ work_added(Pkg) ->  gen_event:notify(?SERVER, {work_added, Pkg}).
 
 worker_died(Pid) ->  gen_event:notify(?SERVER, {process_died, Pid}).
 
-file_error(Filename) ->  gen_event:notify(?SERVER, {file_error, Filename}).
+file_error(Filename, Reason) ->
+    gen_event:notify(?SERVER, {file_error, Filename, Reason}).
 
 directory_error(Filename) ->  gen_event:notify(?SERVER, {directory_error, Filename}).
 

@@ -8,38 +8,49 @@
 
 -module(fs_visitor).
 -author("raballa@sandia.gov").
--vsn("1.0").
+-vsn("0.1.0").
 
--include_lib("kernel/include/file.hrl").
+-export([start/1, init/2, loop/1]).
 
--export([start/1, init/1, loop/1]).
+-record(state, {callback_module, callback_data}).
 
--export([visit_files/2, do_work/1]).
+-define(MAX_FILES_PER_PKG, 10).
+-define(SLEEPMSEC, 500).
 
--define(MAXLEN, 10).
--define(SLEEPSEC, 2).
-
+% Args is a lsit [CallbackModule, Index]
 start(Args) ->
-    spawn(?MODULE, init, [Args]).
+    spawn(?MODULE, init, Args).
 
-init(Args) ->
-    loop(Args).
+init(CallbackModule, Index) ->
+    case apply({CallbackModule, init}, [Index]) of
+        {ok, State } ->
+            try
+                loop(#state{callback_module=CallbackModule, callback_data=State})
+            after
+                apply({CallbackModule, finalize}, [State])
+            end;
+        {error, Reason } ->
+            io:format("Unable to open file: ~p~n", [Reason])
+    end.
     
 %%% Need to make this into normal processes.
-loop(X) ->
+loop(State) ->
     case fs_server:get_work() of
         {visit, Pkg} ->
             fs_event:info_message("~w Got work package ~p ~n", [self(), Pkg]),
-            do_work(Pkg),
+            perform_work_package(State, Pkg),
             fs_event:info_message("~w Completed work package ~p ~n", [self(), Pkg]),            fs_server:work_complete(Pkg),
-            loop(X);
+            loop(State);
 
         {no_work}  ->
             %% log sleep
 %%            fs_event:info_message("~w sleeping~n", [self()]),
-            timer:sleep(?SLEEPSEC * 1000),
-            loop(X);
+            timer:sleep(?SLEEPMSEC),
+            loop(State);
 
+        {done}  ->
+            ok;            
+        
         %% log stop?
         { _Pid, stop } ->
             io:format("Error in client"),
@@ -47,114 +58,148 @@ loop(X) ->
         
         %% Handle unexpected messages?
         Msg  ->
-            io:format("Unexpected message~p", [Msg]),
             fs_event:error_message("Unexpected message ~p~n?", [Msg]),
-                loop(X)
+            loop(State)
     end.
 
-%%% How do we concatenate strings?
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Callback to module
+visit_file(State, Filename, Directory) ->
+    apply({State#state.callback_module, visit_file},
+          [State#state.callback_data, Filename, Directory]).
+    
+%%% Callback to module
+visit_directory(State,  Directory, When) ->
+    apply({State#state.callback_module, visit_directory},
+          [State#state.callback_data, Directory, When]).
+
+%%% Callback to module
+ok_to_visit_directory(State, Directory) ->
+    apply({State#state.callback_module, ok_to_visit},
+          [State#state.callback_data, Directory, directory]).
+    
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%% Catenate the two strings as a full path name...
 make_path(BinDir, RootDir) ->
     Dir = binary_to_list(BinDir),
     Root = binary_to_list(RootDir),
     string:concat(Root, string:concat("/", Dir)).
 
-do_work({directory, BinDir, RootDir}) ->
-    %% Check if file exists, readable, executable...
+%%% perform_work_package/2 has 2 clauses; one for a directory package,
+%%% and one for a file package
+%%% They're really quite similar, but I've note found an elegant way to merge the 
+%%% two yet!
+perform_work_package(State, {directory, BinDir, RootDir}) ->
+
+    %% make_path returns a list (not a binary).
     Dir = make_path(BinDir, RootDir),
-    case ok_to_visit_directory(Dir) of
-        {ok} ->  {ok, Cwd} = file:get_cwd(),
-                 file:set_cwd(Dir),
-                 Files = filelib:wildcard("*", Dir),
-                 visit_files(Files, list_to_binary(Dir)),
-                 file:set_cwd(Cwd);
-        {error, Why } -> fs_event:info_message("Unable to visit directory ~p (~p) ~n", [Dir, Why])
+
+    case ok_to_visit_directory(State, Dir) of
+        {ok} ->
+            {ok, Cwd} = file:get_cwd(),
+            file:set_cwd(Dir),
+            visit_directory(State, Dir, pre),
+            Files = filelib:wildcard("*", Dir),
+            visit_files(State, Files, list_to_binary(Dir)),
+            visit_directory(State, Dir, post),
+            file:set_cwd(Cwd);
+
+        {skip} ->
+            fs_event:info_message("Skippping visit to directory ~p (~p) ~n", [Dir]);
+        
+        {error, Why } ->
+            fs_event:info_message("Unable to visit directory ~p (~p) ~n", [Dir, Why])
     end,
     ok;
 
-do_work({files, FileList, BinDir}) ->
+%%% do the work for a file work package
+perform_work_package(State, {files, FileList, BinDir}) ->
     Dir = binary_to_list(BinDir),
-    case ok_to_visit_directory(Dir) of
+    %% This may be a redundant case, but there's no guarantee that the
+    %% directory has not been deleted while this work package was in the
+    %% in the todo list
+    case ok_to_visit_directory(State, Dir) of
         {ok } ->
             {ok, Cwd} = file:get_cwd(),
             file:set_cwd(Dir),
-            visit_files(lists:map(fun binary_to_list/1, FileList), BinDir),
+            Files = lists:map(fun binary_to_list/1, FileList),
+            visit_files(State, Files,  BinDir),
             file:set_cwd(Cwd);
+        {skip} ->
+            fs_event:info_message("Skippping visit to directory ~p (~p) ~n", [Dir]);
+
         {error, Why } ->
             fs_event:info_message("Unable to visit directory ~p (~p) ~n", [Dir, Why])
     end,
     ok.
 
 %% 
-ok_to_visit_directory(Dir) ->
-    %% exists
-    %% is directory
-    %% readable
-    %% executable
-    {ok}.
 
-add_work(dir, Dir, BinDir) ->
-    fs_server:add_work({directory, list_to_binary(Dir), BinDir});
+%%% Helper functions to add work packages
+add_directory_work_pkg(Dir, BinDir) ->
+    fs_server:add_work({directory, list_to_binary(Dir), BinDir}).
 
-add_work(files, FileList, BinDir) ->
+add_file_work_pkg(FileList, BinDir) ->
     add_filtered_files(FileList, [], BinDir).
 
-add_filtered_files([], Files, BinDir) ->
-    fs_server:add_work({files, Files, BinDir});
+%%% add_filtered_files traverses a list of files,
+%%%    if it finds a directory, it adds a directory work package to the server
+%%%    otherwise, it converts the filename to a binary and cons's it onto the
+%%%    result list, which is an accumulator.
+%%% Once all the files are checked, it adds the file work list to the server
 
-add_filtered_files([ H | T ], Files, BinDir) ->
+add_filtered_files([], [], _BinDir) ->
+    ok; %ignore - no reason to add an empty file work package
+
+add_filtered_files([], ResultFiles, BinDir) ->
+    fs_server:add_work({files, ResultFiles, BinDir});
+
+add_filtered_files([ H | T ], ResultFiles, BinDir) ->
     case filelib:is_dir(H) of 
-        true -> %io:format("Adding Directory ~p~n", [H]),
-            add_work(dir, H, BinDir),
-            add_filtered_files(T, Files, BinDir);
-        false -> add_filtered_files(T, [ list_to_binary(H) | Files ], BinDir)
+        true ->
+            add_directory_work_pkg(H, BinDir),
+            add_filtered_files(T, ResultFiles, BinDir);
+        false -> add_filtered_files(T, [ list_to_binary(H) | ResultFiles ], BinDir)
     end.
 
-%%%
-visit_files(FileList, Tag) ->
-    case catch(lists:split(?MAXLEN, FileList)) of
+
+%%% visit_files/3 traverses a list of files and splits it into blocks of size MAX_FILES_PER_PKG.
+%%% It also processes the files in the final block
+visit_files(State, FileList, BinDir) ->
+    case catch(lists:split(?MAX_FILES_PER_PKG, FileList)) of
+        %% Calling lists:split on a list  shorter than MAX_FILES_PER_PKG throws an exception
+        %% In this case, just process the files
         {'EXIT', _Why } ->
-            visit_list(FileList, Tag, 0);
+            process_file_list(State, FileList, BinDir, 0);
         
+        %% Exactly MAX_FILES_PER_PKG files in the list; process it
         {List1, []} -> 
-            visit_list(List1, Tag, 0);
+            process_file_list(State, List1, BinDir, 0);
         
+        %% More than MAX_FILES_PER_PKG in the list. Put the first block into the worklist
+        %% and recurse on the rest.
         {List1, List2} -> 
-            add_work(files, List1, Tag),
-            visit_files(List2, Tag)
+            add_file_work_pkg(List1, BinDir),
+            visit_files(State, List2, BinDir)
         end.
 
-visit_list([], _Tag, N) ->
+%%% Function to call the visitor_callbacks on the files in the list.
+%%% We could almost make this a mapping function, but the argument N 
+%%% counts the number of actual files visited.
+%%%
+%%% Note that if we find a directory (which we shouldn't, I don't think!), but
+%%% one can never be sure. The file system is not quiescent!
+%%% then we add it to the work list and go on.
+%%%
+process_file_list(_State, [], _BinDir, N) ->
     fs_event:visit_update(N);
 
-visit_list([H | T], Tag, N) -> 
+process_file_list(State, [H | T], BinDir, N) -> 
     case filelib:is_dir(H) of 
-        true ->  add_work(dir, H,  Tag), visit_list(T, Tag, N);
-        false -> visit_file(H, Tag),    visit_list(T, Tag, N+1)
+        true ->  add_directory_work_pkg(H,  BinDir),
+                 process_file_list(State, T, BinDir, N);
+
+        false -> visit_file(State, H, BinDir),
+                 process_file_list(State, T, BinDir, N+1)
     end.
-
-visit_file(Filename, Dir) ->
-%%    fs_event:info_message("Visiting ~p~n", [Filename]),
-    case file:read_file_info(Filename) of
-        {ok, FileData} ->
-            visit_file(Filename, Dir, FileData#file_info.type, FileData);
-
-        {error, _} ->
-            io:format("Unable to stat ~s ~n", [Filename])
-    end,
-    ok.
-
-visit_file(Filename, Dir, regular, FileData)  ->
-    Atime = FileData#file_info.atime,
-    Mtime = FileData#file_info.mtime,
-    Ctime = FileData#file_info.ctime,
-    io:format("~s/~s ~b ~b ~b ~n", [Dir, Filename, as_epoch(Atime), as_epoch(Ctime), as_epoch(Mtime)]);
-
-visit_file(Filename, Dir, Other, _FileData) ->
-    fs_event:info_message("Ignoring ~w file  ~s to worklist!~n", [Other, Filename]).
-
-% How can we factor out the constant?
-as_epoch(Date) ->
-    UnixEpoch = calendar:datetime_to_gregorian_seconds({{1970,1,1}, {0,0,0}}),
-    calendar:datetime_to_gregorian_seconds(Date) - UnixEpoch.
-
-

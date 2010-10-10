@@ -68,8 +68,16 @@ handle_call({get_work}, {FromPid, _FromTag} , State)->
                      
                      {reply, Reply, NewState};
         _ ->
-            io:format("Returning no work ~n", []),
-            {reply, {no_work}, State}
+            case State#state.inprogress of
+                [] ->
+                    io:format("Returning done ~n", []),
+                    {reply, {done}, State};
+
+                [_H | _T ] ->
+                    io:format("Returning no_work ~n", []),
+                    {reply, {no_work}, State}
+            end
+
     end;
 
 handle_call({work_complete, Pkg}, From, State) ->
