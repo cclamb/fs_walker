@@ -5,7 +5,6 @@
 %%% 
 %%% Be given a filter/function to apply to file.
 %%%
-
 -module(fs_visitor).
 -author("raballa@sandia.gov").
 -vsn("0.1.0").
@@ -52,9 +51,9 @@ loop(State) ->
             ok;            
         
         %% log stop?
-        { _Pid, stop } ->
-            io:format("Error in client"),
-            ok;
+%        { _Pid, stop } ->
+%            io:format("Error in client"),
+%            ok;
         
         %% Handle unexpected messages?
         Msg  ->
@@ -81,10 +80,14 @@ ok_to_visit_directory(State, Directory) ->
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%% Catenate the two strings as a full path name...
-make_path(BinDir, RootDir) ->
+make_path(RootDir, BinDir) ->
     Dir = binary_to_list(BinDir),
     Root = binary_to_list(RootDir),
     string:concat(Root, string:concat("/", Dir)).
+
+concat_path(Dir, Filename) ->
+    string:concat(Root, string:concat("/", Dir)).
+
 
 %%% perform_work_package/2 has 2 clauses; one for a directory package,
 %%% and one for a file package
@@ -93,18 +96,20 @@ make_path(BinDir, RootDir) ->
 perform_work_package(State, {directory, BinDir, RootDir}) ->
 
     %% make_path returns a list (not a binary).
-    Dir = make_path(BinDir, RootDir),
+    Dir = make_path(RootDir, BinDir),
 
     case ok_to_visit_directory(State, Dir) of
         {ok} ->
             {ok, Cwd} = file:get_cwd(),
             file:set_cwd(Dir),
-            visit_directory(State, Dir, pre),
-            Files = filelib:wildcard("*", Dir),
-            visit_files(State, Files, list_to_binary(Dir)),
-            visit_directory(State, Dir, post),
-            file:set_cwd(Cwd);
-
+            try 
+                visit_directory(State, Dir, pre),
+                Files = filelib:wildcard("*", Dir),
+                visit_files(State, Files, list_to_binary(Dir)),
+                visit_directory(State, Dir, post)
+            after
+                file:set_cwd(Cwd)
+            end;
         {skip} ->
             fs_event:info_message("Skippping visit to directory ~p (~p) ~n", [Dir]);
         
@@ -123,9 +128,12 @@ perform_work_package(State, {files, FileList, BinDir}) ->
         {ok } ->
             {ok, Cwd} = file:get_cwd(),
             file:set_cwd(Dir),
-            Files = lists:map(fun binary_to_list/1, FileList),
-            visit_files(State, Files,  BinDir),
-            file:set_cwd(Cwd);
+            try 
+                Files = lists:map(fun binary_to_list/1, FileList),
+                visit_files(State, Files,  BinDir)
+            after
+                file:set_cwd(Cwd)
+            end;
         {skip} ->
             fs_event:info_message("Skippping visit to directory ~p (~p) ~n", [Dir]);
 
