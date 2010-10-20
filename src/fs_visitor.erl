@@ -7,9 +7,9 @@
 %%%
 -module(fs_visitor).
 -author("raballa@sandia.gov").
--vsn("0.1.0").
+-vsn("0.2.0").
 
--export([start/1, init/2, loop/1]).
+-export([start/1, init/3, loop/1]).
 
 -record(state, {callback_module, callback_data}).
 
@@ -20,8 +20,8 @@
 start(Args) ->
     spawn(?MODULE, init, Args).
 
-init(CallbackModule, Index) ->
-    case apply({CallbackModule, init}, [Index]) of
+init(CallbackModule, Index, MaxClients) ->
+    case apply({CallbackModule, init}, [Index, MaxClients]) of
         {ok, State } ->
             try
                 loop(#state{callback_module=CallbackModule, callback_data=State})
@@ -63,10 +63,10 @@ loop(State) ->
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Callback to module
-visit_file(State, Filename, Directory) ->
+visit_file(State, Filename) ->
     apply({State#state.callback_module, visit_file},
-          [State#state.callback_data, Filename, Directory]).
-    
+          [State#state.callback_data, Filename]).
+
 %%% Callback to module
 visit_directory(State,  Directory, When) ->
     apply({State#state.callback_module, visit_directory},
@@ -85,31 +85,19 @@ make_path(RootDir, BinDir) ->
     Root = binary_to_list(RootDir),
     string:concat(Root, string:concat("/", Dir)).
 
-concat_path(Dir, Filename) ->
-    string:concat(Root, string:concat("/", Dir)).
-
-
 %%% perform_work_package/2 has 2 clauses; one for a directory package,
 %%% and one for a file package
 %%% They're really quite similar, but I've note found an elegant way to merge the 
 %%% two yet!
 perform_work_package(State, {directory, BinDir, RootDir}) ->
-
     %% make_path returns a list (not a binary).
     Dir = make_path(RootDir, BinDir),
-
     case ok_to_visit_directory(State, Dir) of
         {ok} ->
-            {ok, Cwd} = file:get_cwd(),
-            file:set_cwd(Dir),
-            try 
-                visit_directory(State, Dir, pre),
-                Files = filelib:wildcard("*", Dir),
-                visit_files(State, Files, list_to_binary(Dir)),
-                visit_directory(State, Dir, post)
-            after
-                file:set_cwd(Cwd)
-            end;
+            visit_directory(State, Dir, pre),
+            Files = filelib:wildcard("*", Dir),
+            visit_files(State, Files, Dir, list_to_binary(Dir)),
+            visit_directory(State, Dir, post);
         {skip} ->
             fs_event:info_message("Skippping visit to directory ~p (~p) ~n", [Dir]);
         
@@ -126,22 +114,15 @@ perform_work_package(State, {files, FileList, BinDir}) ->
     %% in the todo list
     case ok_to_visit_directory(State, Dir) of
         {ok } ->
-            {ok, Cwd} = file:get_cwd(),
-            file:set_cwd(Dir),
-            try 
-                Files = lists:map(fun binary_to_list/1, FileList),
-                visit_files(State, Files,  BinDir)
-            after
-                file:set_cwd(Cwd)
-            end;
+            Files = lists:map(fun binary_to_list/1, FileList),
+            visit_files(State, Files, Dir,  BinDir);
         {skip} ->
             fs_event:info_message("Skippping visit to directory ~p (~p) ~n", [Dir]);
-
+        
         {error, Why } ->
             fs_event:info_message("Unable to visit directory ~p (~p) ~n", [Dir, Why])
     end,
     ok.
-
 %% 
 
 %%% Helper functions to add work packages
@@ -156,7 +137,6 @@ add_file_work_pkg(FileList, BinDir) ->
 %%%    otherwise, it converts the filename to a binary and cons's it onto the
 %%%    result list, which is an accumulator.
 %%% Once all the files are checked, it adds the file work list to the server
-
 add_filtered_files([], [], _BinDir) ->
     ok; %ignore - no reason to add an empty file work package
 
@@ -174,23 +154,26 @@ add_filtered_files([ H | T ], ResultFiles, BinDir) ->
 
 %%% visit_files/3 traverses a list of files and splits it into blocks of size MAX_FILES_PER_PKG.
 %%% It also processes the files in the final block
-visit_files(State, FileList, BinDir) ->
+visit_files(State, FileList, Dir, BinDir) ->
     case catch(lists:split(?MAX_FILES_PER_PKG, FileList)) of
         %% Calling lists:split on a list  shorter than MAX_FILES_PER_PKG throws an exception
         %% In this case, just process the files
         {'EXIT', _Why } ->
-            process_file_list(State, FileList, BinDir, 0);
+            process_file_list(State, FileList, Dir, 0);
         
         %% Exactly MAX_FILES_PER_PKG files in the list; process it
         {List1, []} -> 
-            process_file_list(State, List1, BinDir, 0);
+            process_file_list(State, List1, Dir, 0);
         
         %% More than MAX_FILES_PER_PKG in the list. Put the first block into the worklist
         %% and recurse on the rest.
         {List1, List2} -> 
             add_file_work_pkg(List1, BinDir),
-            visit_files(State, List2, BinDir)
+            visit_files(State, List2, Dir, BinDir)
         end.
+
+paste_path(Dir, Filename) ->
+    string:concat(Dir, string:concat("/", Filename)).
 
 %%% Function to call the visitor_callbacks on the files in the list.
 %%% We could almost make this a mapping function, but the argument N 
@@ -200,14 +183,16 @@ visit_files(State, FileList, BinDir) ->
 %%% one can never be sure. The file system is not quiescent!
 %%% then we add it to the work list and go on.
 %%%
-process_file_list(_State, [], _BinDir, N) ->
+process_file_list(_State, [], _Dir, N) ->
     fs_event:visit_update(N);
 
-process_file_list(State, [H | T], BinDir, N) -> 
-    case filelib:is_dir(H) of 
-        true ->  add_directory_work_pkg(H,  BinDir),
-                 process_file_list(State, T, BinDir, N);
+process_file_list(State, [H | T], Dir, N) ->
+    FullPath = paste_path(Dir, H),
+    case filelib:is_dir(FullPath) of 
+        %% I think the next case can't happen...
+        true ->  add_directory_work_pkg(H,  list_to_binary(Dir)),
+                 process_file_list(State, T, Dir, N);
 
-        false -> visit_file(State, H, BinDir),
-                 process_file_list(State, T, BinDir, N+1)
+        false -> visit_file(State, FullPath),
+                 process_file_list(State, T, Dir, N+1)
     end.

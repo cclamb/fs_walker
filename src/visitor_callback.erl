@@ -1,6 +1,6 @@
 -module(visitor_callback).
 
--export([init/1, finalize/1, visit_file/3, visit_directory/3, ok_to_visit/3]).
+-export([init/2, finalize/1, visit_file/2, visit_directory/3, ok_to_visit/3]).
 
 -record(state, {module=?MODULE, rank=0, io_dev, filename}).
 
@@ -12,8 +12,8 @@
 %%%
 %%% -- in this example, the state contains the file name and an IO handle.
 %%%
-init(Index) ->
-    FileName = lists:concat(["client.", Index, ".out"]),
+init(Index, MaxClients) ->
+    FileName = lists:concat(["client.", Index, ".", MaxClients, ".out"]),
     case file:open(FileName, [write]) of
         {ok, IoDev} ->
             State = #state{rank=Index, io_dev=IoDev, filename=FileName},
@@ -31,18 +31,14 @@ finalize(State) ->
     IoDev = State#state.io_dev,
     file:close(IoDev).
 
-
-%%%
 %%% visit_file(State, Filename, Directory).
 %%%   When this function is called, the current working directory is already
 %%%    set to Directory.
 %%%
-visit_file(State, Filename, Directory) ->
-    %% Get file info
+visit_file(State, Filename) ->
     case file:read_file_info(Filename) of
         {ok, FileData} ->
-            my_visit_file(State, Filename, Directory,
-                          FileData#file_info.type, FileData);
+            my_visit_file(State, Filename, FileData#file_info.type, FileData);
         {error, Reason} ->
             fs_event:file_error(Filename, Reason)
     end,
@@ -53,9 +49,7 @@ visit_file(State, Filename, Directory) ->
 %%% and after the directory traversal is complete (post)
 %%%
 visit_directory(State, Directory, pre) ->
-    {ok, Cwd} = file:get_cwd(),
-    io:format(State#state.io_dev, "#Visiting directory ~p CWD = ~p~n",
-              [Directory, Cwd]),
+    io:format(State#state.io_dev, "#Visiting directory ~p~n", [Directory]),
     ok;
 
 visit_directory(_State, _Directory, post) -> ok.
@@ -70,18 +64,18 @@ as_epoch(Date) ->
 %%% the type of the file, and the results from read_file_info.
 %%%
 %%% This is the clause for a normal file.
-my_visit_file(State, Filename, Dir, regular, FileData)  ->
+my_visit_file(State, Filename, regular, FileData)  ->
     Atime = FileData#file_info.atime,
     Mtime = FileData#file_info.mtime,
     Ctime = FileData#file_info.ctime,
     io:format(State#state.io_dev,
-              "~s/~s ~b ~b ~b ~n",
-              [Dir, Filename, as_epoch(Atime), as_epoch(Ctime), as_epoch(Mtime)]);
+              "~s ~b ~b ~b ~n",
+              [Filename, as_epoch(Atime), as_epoch(Ctime), as_epoch(Mtime)]);
 
 %%% This clause handles any other cases, like links.
 %%%
-my_visit_file(_State, Filename, _Dir, Other, _FileData) ->
-    fs_event:info_message("Ignoring ~w file  ~s to worklist!~n", [Other, Filename]).
+my_visit_file(_State, Filename, Other, _FileData) ->
+    fs_event:info_message("Ignoring OTHER (~w) file  ~s ~n", [Other, Filename]).
 
 %%% Predicate - returns {ok}/{skip}/{error, Reason}
 %%% This function neeeds to be filled out!
