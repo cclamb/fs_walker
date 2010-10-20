@@ -83,7 +83,8 @@ ok_to_visit_directory(State, Directory) ->
 make_path(RootDir, BinDir) ->
     Dir = binary_to_list(BinDir),
     Root = binary_to_list(RootDir),
-    string:concat(Root, string:concat("/", Dir)).
+    filename:join(Root, Dir).
+
 
 %%% perform_work_package/2 has 2 clauses; one for a directory package,
 %%% and one for a file package
@@ -172,8 +173,6 @@ visit_files(State, FileList, Dir, BinDir) ->
             visit_files(State, List2, Dir, BinDir)
         end.
 
-paste_path(Dir, Filename) ->
-    string:concat(Dir, string:concat("/", Filename)).
 
 %%% Function to call the visitor_callbacks on the files in the list.
 %%% We could almost make this a mapping function, but the argument N 
@@ -187,7 +186,7 @@ process_file_list(_State, [], _Dir, N) ->
     fs_event:visit_update(N);
 
 process_file_list(State, [H | T], Dir, N) ->
-    FullPath = paste_path(Dir, H),
+    FullPath = filename:join(Dir, H),
     case filelib:is_dir(FullPath) of 
         %% I think the next case can't happen...
         true ->  add_directory_work_pkg(H,  list_to_binary(Dir)),

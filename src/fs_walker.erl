@@ -2,6 +2,8 @@
 -export([start/2]).
 
 start(Root, ClientCount) ->
+    error_logger:logfile({open, "fs_log.log"}),
+    error_logger:tty(false),
     fs_event:start_link(),
     fs_event_logger:add_handler(),
     fs_server:start_link(),

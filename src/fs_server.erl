@@ -50,8 +50,9 @@ work_complete(Pkg) ->
 add_work(Pkg) ->
     gen_server:call(?SERVER, {add_work, Pkg}).
 
+%%% Sets the root directory to an absolute path name, if needed.
 set_root(Dir) ->
-    add_work({directory, list_to_binary("."), list_to_binary(Dir)}).
+   add_work({directory, list_to_binary("."), list_to_binary(filename:absname(Dir))}).
 
 %%% Called from Error Handler
 process_died(Pid) ->  gen_server:cast(?SERVER, {pid_died, Pid}).

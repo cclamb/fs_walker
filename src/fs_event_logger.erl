@@ -38,7 +38,7 @@ handle_event({orphan_work, Pid}, State) ->
     {ok, State#state{file_errors = State#state.file_errors + 1}};
 
 handle_event({file_error, FileName, Reason}, State) ->
-    error_logger:info_msg("file_error(~p):~p", [FileName, Reason]),
+    error_logger:warning_msg("file_error(~p):~p", [FileName, Reason]),
     {ok, State#state{file_errors = State#state.file_errors + 1}};
 
 handle_event({directory_error, FileName}, State) ->
