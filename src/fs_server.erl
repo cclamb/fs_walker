@@ -69,8 +69,8 @@ handle_call({get_work}, {FromPid, _FromTag} , State)->
                      
                      {reply, Reply, NewState};
         _ ->
-            case State#state.inprogress of
-                [] ->
+              case State#state.inprogress of
+              [] ->
                     io:format("Returning done ~n", []),
                     {reply, {done}, State};
 
