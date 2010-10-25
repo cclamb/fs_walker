@@ -1,6 +1,7 @@
 % Module based on Erlang and OTP/sc_event (page 180)
--module(fs_event).
--export([start_link/0, add_handler/2,
+-module(fsw_eventlog).
+
+-export([start_link/1, add_handler/2,
          work_added/1, spurious_complete/1,
          file_error/2, directory_error/1,
          access_timeout/1, orphan_died/0, orphan_died/1,
@@ -9,8 +10,10 @@
 
 -define(SERVER, ?MODULE).
 
-start_link() ->
-    gen_event:start_link({local, ?SERVER}).
+start_link(LogFile) ->
+    Res = gen_event:start_link({local, ?SERVER}),
+    fsw_eventlog_handler:add_handler(LogFile),
+    Res.   
 
 add_handler(Handler, Args) ->
     gen_event:add_handler(?SERVER, Handler, Args).

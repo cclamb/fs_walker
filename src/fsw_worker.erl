@@ -5,7 +5,7 @@
 %%% 
 %%% Be given a filter/function to apply to file.
 %%%
--module(fs_visitor).
+-module(fsw_worker).
 -author("raballa@sandia.gov").
 -vsn("0.2.0").
 
@@ -34,16 +34,16 @@ init(CallbackModule, Index, MaxClients) ->
     
 %%% Need to make this into normal processes.
 loop(State) ->
-    case fs_server:get_work() of
+    case fsw_blackboard:get_work() of
         {visit, Pkg} ->
-            fs_event:info_message("~w Got work package ~p ~n", [self(), Pkg]),
+            fsw_eventlog:info_message("~w Got work package ~p ~n", [self(), Pkg]),
             perform_work_package(State, Pkg),
-            fs_event:info_message("~w Completed work package ~p ~n", [self(), Pkg]),            fs_server:work_complete(Pkg),
+            fsw_eventlog:info_message("~w Completed work package ~p ~n", [self(), Pkg]),            fsw_blackboard:work_complete(Pkg),
             loop(State);
 
         {no_work}  ->
             %% log sleep
-%%            fs_event:info_message("~w sleeping~n", [self()]),
+%%            fsw_eventlog:info_message("~w sleeping~n", [self()]),
             timer:sleep(?SLEEPMSEC),
             loop(State);
 
@@ -57,7 +57,7 @@ loop(State) ->
         
         %% Handle unexpected messages?
         Msg  ->
-            fs_event:error_message("Unexpected message ~p~n?", [Msg]),
+            fsw_eventlog:error_message("Unexpected message ~p~n?", [Msg]),
             loop(State)
     end.
 
@@ -100,10 +100,10 @@ perform_work_package(State, {directory, BinDir, RootDir}) ->
             visit_files(State, Files, Dir, list_to_binary(Dir)),
             visit_directory(State, Dir, post);
         {skip} ->
-            fs_event:info_message("Skippping visit to directory ~p (~p) ~n", [Dir]);
+            fsw_eventlog:info_message("Skippping visit to directory ~p (~p) ~n", [Dir]);
         
         {error, Why } ->
-            fs_event:info_message("Unable to visit directory ~p (~p) ~n", [Dir, Why])
+            fsw_eventlog:info_message("Unable to visit directory ~p (~p) ~n", [Dir, Why])
     end,
     ok;
 
@@ -118,17 +118,17 @@ perform_work_package(State, {files, FileList, BinDir}) ->
             Files = lists:map(fun binary_to_list/1, FileList),
             visit_files(State, Files, Dir,  BinDir);
         {skip} ->
-            fs_event:info_message("Skippping visit to directory ~p (~p) ~n", [Dir]);
+            fsw_eventlog:info_message("Skippping visit to directory ~p (~p) ~n", [Dir]);
         
         {error, Why } ->
-            fs_event:info_message("Unable to visit directory ~p (~p) ~n", [Dir, Why])
+            fsw_eventlog:info_message("Unable to visit directory ~p (~p) ~n", [Dir, Why])
     end,
     ok.
 %% 
 
 %%% Helper functions to add work packages
 add_directory_work_pkg(Dir, BinDir) ->
-    fs_server:add_work({directory, list_to_binary(Dir), BinDir}).
+    fsw_blackboard:add_work({directory, list_to_binary(Dir), BinDir}).
 
 add_file_work_pkg(FileList, BinDir) ->
     add_filtered_files(FileList, [], BinDir).
@@ -142,7 +142,7 @@ add_filtered_files([], [], _BinDir) ->
     ok; %ignore - no reason to add an empty file work package
 
 add_filtered_files([], ResultFiles, BinDir) ->
-    fs_server:add_work({files, ResultFiles, BinDir});
+    fsw_blackboard:add_work({files, ResultFiles, BinDir});
 
 add_filtered_files([ H | T ], ResultFiles, BinDir) ->
     case filelib:is_dir(H) of 
@@ -183,7 +183,7 @@ visit_files(State, FileList, Dir, BinDir) ->
 %%% then we add it to the work list and go on.
 %%%
 process_file_list(_State, [], _Dir, N) ->
-    fs_event:visit_update(N);
+    fsw_eventlog:visit_update(N);
 
 process_file_list(State, [H | T], Dir, N) ->
     FullPath = filename:join(Dir, H),

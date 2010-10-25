@@ -1,20 +1,23 @@
 % Module based on Erlang and OTP/sc_event_logger (page 184ff)
--module(fs_event_logger).
+-module(fsw_eventlog_handler).
 -behaviour(gen_event).
--export([add_handler/0, delete_handler/0]).
+-export([add_handler/1, delete_handler/0]).
 
 -export([init/1, handle_event/2, handle_call/2,
          handle_info/2, code_change/3, terminate/2]).
 
 -record(state, {file_errors=0, directory_errors=0, visited=0, timeouts=0}).
 
-init([]) -> {ok, #state{}}.
+init([LogFile]) ->
+    error_logger:logfile({open, LogFile}),
+    error_logger:tty(false),
+    {ok, #state{}}.
 
-add_handler() ->
-    fs_event:add_handler(?MODULE, []).
+add_handler(LogFile) ->
+    fsw_eventlog:add_handler(?MODULE, [LogFile]).
 
 delete_handler() ->
-    fs_event:delete_handler(?MODULE, []).
+    fsw_eventlog:delete_handler(?MODULE, []).
 
 handle_event({work_added, Pkg}, State) ->
     error_logger:info_msg("work added(~p)~n", [Pkg]),
@@ -30,7 +33,7 @@ handle_event({orphan_died, Pid}, State) ->
 
 handle_event({process_died, Pid}, State) ->
     error_logger:warning_msg("process_died(~w)", [Pid]),
-    fs_workserver:process_died(Pid),
+    fsw_blackboard:process_died(Pid),
     {ok, State};
 
 handle_event({orphan_work, Pid}, State) ->

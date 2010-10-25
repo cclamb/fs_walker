@@ -14,7 +14,7 @@
 %%%
 init(Index, MaxClients) ->
     FileName = lists:concat(["client.", Index, ".", MaxClients, ".out"]),
-    case file:open(FileName, [write]) of
+    case file:open(FileName, [read, write]) of
         {ok, IoDev} ->
             State = #state{rank=Index, io_dev=IoDev, filename=FileName},
             {ok, State};
@@ -40,7 +40,7 @@ visit_file(State, Filename) ->
         {ok, FileData} ->
             my_visit_file(State, Filename, FileData#file_info.type, FileData);
         {error, Reason} ->
-            fs_event:file_error(Filename, Reason)
+            fsw_eventlog:file_error(Filename, Reason)
     end,
     ok.
 
@@ -75,13 +75,13 @@ my_visit_file(State, Filename, regular, FileData)  ->
 %%% This clause handles any other cases, like links.
 %%%
 my_visit_file(_State, Filename, Other, _FileData) ->
-    fs_event:info_message("Ignoring OTHER (~w) file  ~s ~n", [Other, Filename]).
+    fsw_eventlog:info_message("Ignoring OTHER (~w) file  ~s ~n", [Other, Filename]).
 
 %%% Predicate - returns {ok}/{skip}/{error, Reason}
 %%% This function neeeds to be filled out!
 %%% The third argument is an atom; directory if we are visiting a directory,
 %%%
-%%% the current fs_visitor does not call this function with any other values!
+%%% the current fsw_worker does not call this function with any other values!
 ok_to_visit(_State, Directory, directory) ->
     %% exists and is directory
     %% should check permissions here!

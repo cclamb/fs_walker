@@ -1,0 +1,26 @@
+%% -*- mode: Erlang; fill-column: 75; comment-column: 50; -*-
+{application, fswalker,
+ [{description, "File System Walker"},
+  {vsn, "0.1.0"},
+  {modules, [
+             fsw_app,
+             fsw_app_sup,
+             fsw_walker,
+             fsw_blackboard,
+             fsw_blackboard_sup,
+             fsw_eventlog,
+             fsw_eventlog_handler
+             fsw_eventlog_sup,
+             fsw_node_sup,
+             fsw_visitor_callback,
+             fsw_worker,
+             fsw_worker_sup,
+            ]},
+  {registered, [fsw_blackboard]},
+  {applications, [kernel, stdlib]},
+  {env, [ {logfile, "fsw.log"},
+          {clients_per_node, 4},
+          {directory, "."},
+          {visitor_callack, visitor_callback} ]},
+  {mod, {fsw_app, []}},
+]}.
