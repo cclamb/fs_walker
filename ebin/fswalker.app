@@ -18,8 +18,8 @@
   {registered, [fsw_blackboard]},
   {applications, [kernel, stdlib]},
   {env, [ {logfile, "fsw.log"},
-          {clients_per_node, "4"},
-          {directory, "."},
-          {visitor_callback, visitor_callback} ]},
+          {clients_per_node, "2"},
+          {directory, "/Users/raballa/Documents/"},
+          {callback_module, visitor_callback} ]},
   {mod, {fsw_app, [] }}
  ]}.
