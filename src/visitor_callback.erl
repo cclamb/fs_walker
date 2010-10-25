@@ -13,8 +13,9 @@
 %%% -- in this example, the state contains the file name and an IO handle.
 %%%
 init(Index, MaxClients) ->
+    io:format("Initializing client ~w of ~w~n", [Index, MaxClients]),
     FileName = lists:concat(["client.", Index, ".", MaxClients, ".out"]),
-    case file:open(FileName, [read, write]) of
+    case file:open(FileName, [append]) of
         {ok, IoDev} ->
             State = #state{rank=Index, io_dev=IoDev, filename=FileName},
             {ok, State};
