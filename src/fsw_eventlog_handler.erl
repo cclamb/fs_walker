@@ -14,6 +14,7 @@ init([LogFile]) ->
     {ok, #state{}}.
 
 add_handler(LogFile) ->
+    io:format("Adding handler from ~w~n", [?MODULE]),
     fsw_eventlog:add_handler(?MODULE, [LogFile]).
 
 delete_handler() ->

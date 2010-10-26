@@ -19,6 +19,7 @@ start_link(ClientCount, Callback) ->
 
 init([ClientCount, Callback]) ->
     Children = build_child_list(ClientCount, Callback, ClientCount, []),
+    io:format("fsw_node_sup: ~w~n", [Children]),
     {ok, {{one_for_one, 0, 60},   Children}}.
 
 build_child_list(0, _Callback, _Max, L) ->  L;

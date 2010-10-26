@@ -24,8 +24,10 @@ init(CallbackModule, Index, MaxClients) ->
     case apply({CallbackModule, init}, [Index, MaxClients]) of
         {ok, State } ->
             try
+                io:format("worker starts looping~n", []),
                 loop(#state{callback_module=CallbackModule, callback_data=State})
             after
+                io:format("worker done looping~n", []),
                 apply({CallbackModule, finalize}, [State])
             end;
         {error, Reason } ->
@@ -43,7 +45,7 @@ loop(State) ->
 
         {no_work}  ->
             %% log sleep
-%%            fsw_eventlog:info_message("~w sleeping~n", [self()]),
+            fsw_eventlog:info_message("~w sleeping~n", [self()]),
             timer:sleep(?SLEEPMSEC),
             loop(State);
 
