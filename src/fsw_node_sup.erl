@@ -4,9 +4,6 @@
 %%% 
 %%% Question --- how do we handle the monitoring to notify the blackboard that
 %%% a client has died?
-%%%
-%%%
-%%% BOB --- HERE!
 -module(fsw_node_sup).
 -behavior(supervisor).
 

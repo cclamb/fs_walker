@@ -74,15 +74,12 @@ handle_event(Event, State) ->
     error_logger:error_msg("Unknown Event(~w)", [Event]),
     {ok, State}.
 
-
-handle_call(_Request, State) -> Reply = ok,
-                                {ok, Reply, State}.
+%% Stubs for call-backs.
+handle_call(_Request, State) ->  {ok, ok, State}.
 
 handle_info(_Info, State) -> {ok, State}.
 
-terminate(_Reason, _State) ->
-     ok.
+terminate(_Reason, _State) ->    ok.
 
-code_change(_OldVsn, State, _Extra) ->
-     {ok, State}.
+code_change(_OldVsn, State, _Extra) ->   {ok, State}.
 

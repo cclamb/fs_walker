@@ -7,18 +7,16 @@
 -behaviour(gen_server).
 
 % gen_server call-backs
--export([init/1, handle_call/3, handle_cast/2, 
-	 handle_info/2, terminate/2, code_change/3]).
-
--define(SERVER, fsw_blackboar).
+-export([init/1, handle_call/3, handle_cast/2,
+         handle_info/2, terminate/2, code_change/3]).
 
 -export([start_link/1, stop/1, get_work/0, add_work/1, work_complete/1,
-         status/0, process_died/1
-         %set_root/1
-        ]).
+         status/0, process_died/1]).
+
+-define(SERVER, fsw_blackboard).
 
 start_link([RootList]) ->
-    gen_server:start_link({local, ?SERVER}, ?MODULE, [RootList], []).
+    gen_server:start_link({global, ?SERVER}, ?MODULE, [RootList], []).
 
 stop(_State) -> ok.
 
@@ -50,23 +48,23 @@ init(RootList) ->
     {ok, #state{todo=ToDo}}.
 
 %%% Synchronous calls...
-get_work() ->  gen_server:call(?SERVER, {get_work}).
+get_work() ->  gen_server:call({global, ?SERVER}, {get_work}).
 
-status() ->  gen_server:call(?SERVER, status).
+status() ->  gen_server:call({global, ?SERVER}, status).
 
 work_complete(Pkg) ->
-    gen_server:call(?SERVER, {work_complete, Pkg}).
+    gen_server:call({global, ?SERVER}, {work_complete, Pkg}).
 
 %%% These next elements should be casts, I think...
 add_work(Pkg) ->
-    gen_server:call(?SERVER, {add_work, Pkg}).
+    gen_server:call({global, ?SERVER}, {add_work, Pkg}).
 
 %%% Sets the root directory to an absolute path name, if needed.
 %%set_root(Dir) ->
 %%   add_work({directory, list_to_binary("."), list_to_binary(filename:absname(Dir))}).
 
 %%% Called from Error Handler
-process_died(Pid) ->  gen_server:cast(?SERVER, {pid_died, Pid}).
+process_died(Pid) ->  gen_server:cast({global, ?SERVER}, {pid_died, Pid}).
 
 %%% This is a synchronous call, and should never show up more than once at  time
 %%% from a given PID.
@@ -76,7 +74,6 @@ handle_call({get_work}, {FromPid, _FromTag} , State)->
                      NewState = State#state{todo = T,
                                             inprogress = [{FromPid, H} |
                                                           State#state.inprogress]},
-                     
                      
                      {reply, Reply, NewState};
         _ ->
@@ -147,6 +144,3 @@ terminate(_Reason, _State) ->
 code_change(_OldVsn, State, _Extra) ->
      {ok, State}.
 
-        
-
-    
