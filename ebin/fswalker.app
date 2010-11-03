@@ -9,16 +9,17 @@
 %             fsw_distributed_node_sup,
              fsw_eventlog,
              fsw_eventlog_handler,
-%             fsw_node_sup,
-             fsw_toplevel
-%             fsw_worker,
-%             fsw_worker_sup,
-%             visitor_callback
+             fsw_node_sup,
+             fsw_toplevel,
+             fsw_worker,
+             fsw_worker_sup,
+             visitor_callback
             ]},
-  {registered, [fsw_blackboard]},
+  {registered, [fsw_blackboard, fsw_eventlog]},
   {applications, [kernel, stdlib]},
   {env, [ {logfile, "fsw.log"},
           {clients_per_node, "2"},
+          {nodelist, [worker@s919538]},
           {directory, "/Users/raballa/Documents/"},
           {callback_module, visitor_callback} ]},
   {mod, {fsw_app, [] }}

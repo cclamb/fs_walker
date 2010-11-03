@@ -10,13 +10,14 @@
 -export([start_link/2]).
 -export([init/1]).
 
-%% Froeach node in node list, create distributed node instance.
+%% Start the workers in the node.
 start_link(ClientCount, Callback) ->
+    error_logger:info_msg("fsw_node_sup: ~w/~w~n", [ClientCount, Callback]),
     supervisor:start_link(?MODULE, [ClientCount, Callback]).
 
 init([ClientCount, Callback]) ->
+    error_logger:info_msg("fsw_node_sup:init ~w/~w~n", [ClientCount, Callback]),
     Children = build_child_list(ClientCount, Callback, ClientCount, []),
-    io:format("fsw_node_sup: ~w~n", [Children]),
     {ok, {{one_for_one, 0, 60},   Children}}.
 
 build_child_list(0, _Callback, _Max, L) ->  L;

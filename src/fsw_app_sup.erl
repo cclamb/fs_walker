@@ -17,13 +17,14 @@ init(_Args) ->
     {ok, Root} = application:get_env(directory),
     {ok, ClientInt} = application:get_env(clients_per_node),
     {ok, CallbackModule} = application:get_env(callback_module),
-    %% How do we pass this in?
-    NodeList = [ me ],
+    {ok, NodeList } = application:get_env(nodelist),
+
     {ClientCount,  _Stuff} = string:to_integer(ClientInt),
     io:format("Got logfile ~s~n", [Logfile]),
     io:format("Got Root ~s~n", [Root]),
     io:format("Got Client Count ~w~n", [ClientCount]),
     io:format("Got Callback module ~w~n", [CallbackModule]),
+    io:format("Got Node list ~p~n", [NodeList]),
     
     %% Spawn the event logger
     EventLog = {fsw_eventlog, {fsw_eventlog, start_link, [Logfile]},
@@ -43,9 +44,15 @@ init(_Args) ->
 %%     %% and each distributed node is a supervisor for several clients.
     
 %%     %%  We really need a fsw_distributed_nodes_sup here
-    NodeMgr = {fsw_node_sup, {fsw_node_sup,
-                              start_link, [ClientCount, CallbackModule]},
-               permanent, 2000, worker, [fsw_node_sup]},
+
+%%     NodeMgr = {fsw_node_sup, {fsw_node_sup,
+%%                               start_link, [ClientCount, CallbackModule]},
+%%                permanent, 2000, worker, [fsw_node_sup]},
+
+    NodeMgr = {fsw_rnode_sup, {fsw_rnode_sup,
+                               start_link,
+                               [worker@s919538, ClientCount, CallbackModule]},
+               permanent, 2000, worker, [fsw_remote_node_sup]},
     
 %%     Children = [EventLog, Server, NodeMgr],
     RestartStrategy = {one_for_one, 0, 1},

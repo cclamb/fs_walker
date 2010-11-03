@@ -19,7 +19,7 @@ init(LogFile) ->
     fsw_eventlog_handler:add_handler(LogFile).
 
 add_handler(Handler, Args) ->
-    gen_event:add_handler(?SERVER, Handler, Args).
+    gen_event:add_handler({global, ?SERVER}, Handler, Args).
 
 delete_handler(Handler, Args) ->
     gen_event:delete_handler({global, ?SERVER}, Handler, Args).

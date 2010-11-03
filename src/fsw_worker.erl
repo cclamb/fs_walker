@@ -24,10 +24,10 @@ init(CallbackModule, Index, MaxClients) ->
     case apply({CallbackModule, init}, [Index, MaxClients]) of
         {ok, State } ->
             try
-                io:format("worker starts looping~n", []),
+                fsw_eventlog:info_msg("worker starts looping~n", []),
                 loop(#state{callback_module=CallbackModule, callback_data=State})
             after
-                io:format("worker done looping~n", []),
+                fsw_eventlog:info_msg("worker done looping~n", []),
                 apply({CallbackModule, finalize}, [State])
             end;
         {error, Reason } ->
@@ -38,14 +38,15 @@ init(CallbackModule, Index, MaxClients) ->
 loop(State) ->
     case fsw_blackboard:get_work() of
         {visit, Pkg} ->
-            fsw_eventlog:info_message("~w Got work package ~p ~n", [self(), Pkg]),
+            fsw_eventlog:info_msg("~w Got work package ~p ~n", [self(), Pkg]),
             perform_work_package(State, Pkg),
-            fsw_eventlog:info_message("~w Completed work package ~p ~n", [self(), Pkg]),            fsw_blackboard:work_complete(Pkg),
+            fsw_eventlog:info_msg("~w Completed work package ~p ~n", [self(), Pkg]),
+            fsw_blackboard:work_complete(Pkg),
             loop(State);
 
         {no_work}  ->
             %% log sleep
-            fsw_eventlog:info_message("~w sleeping~n", [self()]),
+            fsw_eventlog:info_msg("~w sleeping~n", [self()]),
             timer:sleep(?SLEEPMSEC),
             loop(State);
 

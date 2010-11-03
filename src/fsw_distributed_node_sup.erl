@@ -19,12 +19,20 @@
 start_link(NodeList, ClientCount, CallBack) ->
     supervisor:start_link(?MODULE, [NodeList, ClientCount, CallBack]).
 
-init(_Args) ->
+init([NodeList, ClientCount, Callback]) ->
     {ok, {{one_for_one, 1, 60},
           [
            {?MODULE, {?MODULE,  spawn_nodes, [1, 2, 4]},
             permanent, brutal_kill, worker, [?MODULE]}]}}.
 
+build_child_list([], _ClientCount, _Callback, L) ->  L;
+build_child_list([H | T], ClientCount, Callback, L) ->
+    Name = foo,
+    Clause = {Name, {fsw_rnode_sup, start_link, [H, ClientCount, Callback]},
+              permanent, 2000, supervisor, [fsw_remote_node_sup]},
+    build_child_list(T, ClientCount, Callback,  [Clause | L]).
+
+
 spawn_nodes(NodeList, ClientCount, Callback) ->
     io:format("~s: spawn_nodes called; clients = ~w~n", [?MODULE, ClientCount]).
-%    lists:map(fun(X) -> spawn_link(X, fsw_node_sup, init, [ClientCount]).
+%lists:map(fun(X) -> spawn_link(X, fsw_node_sup, init, [ClientCount]).
