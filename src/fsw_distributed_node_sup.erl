@@ -34,5 +34,5 @@ build_child_list([H | T], ClientCount, Callback, L) ->
 
 
 spawn_nodes(NodeList, ClientCount, Callback) ->
-    io:format("~s: spawn_nodes called; clients = ~w~n", [?MODULE, ClientCount]).
+    fsw_eventlog:info_msg("~s: spawn_nodes called; clients = ~w~n", [?MODULE, ClientCount]).
 %lists:map(fun(X) -> spawn_link(X, fsw_node_sup, init, [ClientCount]).

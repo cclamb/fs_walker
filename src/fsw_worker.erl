@@ -31,7 +31,7 @@ init(CallbackModule, Index, MaxClients) ->
                 apply({CallbackModule, finalize}, [State])
             end;
         {error, Reason } ->
-            io:format("Unable to open file: ~p~n", [Reason])
+            fsw_eventlog:info_msg("Unable to open file: ~p~n", [Reason])
     end.
     
 %%% Need to make this into normal processes.
@@ -55,7 +55,7 @@ loop(State) ->
         
         %% log stop?
 %        { _Pid, stop } ->
-%            io:format("Error in client"),
+%            fsw_eventlog:info_msg("Error in client"),
 %            ok;
         
         %% Handle unexpected messages?

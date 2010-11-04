@@ -13,8 +13,8 @@ init([]) ->
     %% Bob
     {ok, Logfile} = application:get_env(logfile),
     {ok, Root} = application:get_env(directory),
-    io:format("Got logfile ~s~n", [Logfile]),
-    io:format("Got directory ~s~n", [Root]),
+    fsw_eventlog:info_msg("Got logfile ~s~n", [Logfile]),
+    fsw_eventlog:info_msg("Got directory ~s~n", [Root]),
     Server = {fsw_test, {fsw_test, start_link, [Logfile, Root]},
               permanent, 2000, worker, [fsw_test]},
     Children = [Server],

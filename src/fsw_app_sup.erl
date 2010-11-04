@@ -7,31 +7,32 @@
 -define(SERVER, ?MODULE).
 
 start_link() ->
-    io:format("Got to app_sup:start_link called~n", []),       
+    fsw_eventlog:info_msg("Got to app_sup:start_link called~n", []),       
     supervisor:start_link({local, ?SERVER}, ?MODULE, []).
 
 init(_Args) ->
     %% Bob --- need to get directory, clients, nodes from here, or in config file. 
-    io:format("Got to init~n", []),   
-    {ok, Logfile} = application:get_env(logfile),
+    fsw_eventlog:info_msg("Got to init~n", []),   
+    {ok, LogFile} = application:get_env(logfile),
     {ok, Root} = application:get_env(directory),
     {ok, ClientInt} = application:get_env(clients_per_node),
     {ok, CallbackModule} = application:get_env(callback_module),
     {ok, NodeList } = application:get_env(nodelist),
 
     {ClientCount,  _Stuff} = string:to_integer(ClientInt),
-    io:format("Got logfile ~s~n", [Logfile]),
-    io:format("Got Root ~s~n", [Root]),
-    io:format("Got Client Count ~w~n", [ClientCount]),
-    io:format("Got Callback module ~w~n", [CallbackModule]),
-    io:format("Got Node list ~p~n", [NodeList]),
+%%     fsw_eventlog:info_msg("Got logfile ~s~n", [LogFile]),
+%%     fsw_eventlog:info_msg("Got Root ~s~n", [Root]),
+%%     fsw_eventlog:info_msg("Got Client Count ~w~n", [ClientCount]),
+%%     fsw_eventlog:info_msg("Got Callback module ~w~n", [CallbackModule]),
+%%     fsw_eventlog:info_msg("Got Node list ~p~n", [NodeList]),
     
     %% Spawn the event logger
-    EventLog = {fsw_eventlog, {fsw_eventlog, start_link, [Logfile]},
-                permanent, 2000, worker, [fsw_eventlog]},
+    EventLogger = fsw_eventlog:server_name(),
+    EventLog = {fsw_eventlog, {gen_event, start_link, [EventLogger]},
+                permanent, 2000, worker, [gen_event]},
     
     %% Spawn the server
-    Server = {fsw_blackboard, {fsw_blackboard, start_link, [[Root]]},
+    Server = {fsw_blackboard, {fsw_blackboard, start_link, [LogFile, [Root]]},
               permanent, 2000, worker, [fsw_blackboard]},
     
 %%     %% spawn the node-managers --- this may need to be some sort of 
@@ -49,12 +50,15 @@ init(_Args) ->
 %%                               start_link, [ClientCount, CallbackModule]},
 %%                permanent, 2000, worker, [fsw_node_sup]},
 
-    NodeMgr = {fsw_rnode_sup, {fsw_rnode_sup,
-                               start_link,
-                               [worker@s919538, ClientCount, CallbackModule]},
-               permanent, 2000, worker, [fsw_remote_node_sup]},
-    
-%%     Children = [EventLog, Server, NodeMgr],
+    NodeMod = fsw_node_sup,
+    NodeMgr = {NodeMod, {NodeMod,
+                         start_link,
+                         [worker@s919538, ClientCount, CallbackModule]},
+               permanent, 2000, worker, [NodeMod]},
+
+    Children = [EventLog, Server, NodeMgr],
+
+
     RestartStrategy = {one_for_one, 0, 1},
-    %%    {ok, {RestartStrategy, Children}}.
-    {ok, {RestartStrategy, [EventLog, Server, NodeMgr]}}.
+    {ok, {RestartStrategy, Children}}.
+

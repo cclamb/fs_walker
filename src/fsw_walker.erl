@@ -42,8 +42,8 @@ stop() ->
 
 init([Root, ClientArg]) ->
     {ClientCount, _X} = string:to_integer(ClientArg),
-    io:format("The client count is ~w~n", [ClientCount]),
-    io:format("The root is ~w~n", [Root]),
+    fsw_eventlog:info_msg("The client count is ~w~n", [ClientCount]),
+    fsw_eventlog:info_msg("The root is ~w~n", [Root]),
     start(Root, "random.log", ClientCount),
     {ok, [], 0}.
 

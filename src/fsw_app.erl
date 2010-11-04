@@ -11,7 +11,7 @@ start(_Type, _StartArgs) ->
     end.
 
 stop(_State) ->
-    io:format("fsw_app: Stopped ~n", []),
+    fsw_eventlog:info_msg("fsw_app: Stopped ~n", []),
     init:stop(),
     ok.
 

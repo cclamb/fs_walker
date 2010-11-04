@@ -10,13 +10,14 @@
 -export([init/1, handle_call/3, handle_cast/2,
          handle_info/2, terminate/2, code_change/3]).
 
--export([start_link/1, stop/1, get_work/0, add_work/1, work_complete/1,
+-export([start_link/2, stop/1, get_work/0, add_work/1, work_complete/1,
          status/0, process_died/1]).
 
 -define(SERVER, fsw_blackboard).
 
-start_link([RootList]) ->
-    gen_server:start_link({global, ?SERVER}, ?MODULE, [RootList], []).
+start_link(LogFile, RootList) ->
+    gen_server:start_link({global, ?SERVER}, ?MODULE,
+                          [LogFile, RootList], []).
 
 stop(_State) -> ok.
 
@@ -42,7 +43,9 @@ make_dir_pkg(X) ->
      list_to_binary("."),
      list_to_binary(Absdir)}.
 
-init(RootList) ->
+init([LogFile, RootList]) ->
+    fsw_eventlog_handler:add_handler(LogFile),
+    fsw_eventlog:info_msg("Blackboard started with rootlist~n", []),
     %% Set the todo list to a list of directories.
     ToDo = lists:map(fun(X)-> make_dir_pkg(X) end, RootList),
     {ok, #state{todo=ToDo}}.
@@ -80,11 +83,11 @@ handle_call({get_work}, {FromPid, _FromTag} , State)->
             case State#state.inprogress of
                 [] ->
                     %% Nothing in progress or to do
-                    io:format("Returning done ~n", []),
+                    fsw_eventlog:info_msg("Returning done ~n", []),
                     {reply, {done}, State};
 
                 [_H | _T ] ->
-                    io:format("Returning no_work ~n", []),
+                    fsw_eventlog:info_msg("Returning no_work ~n", []),
                     {reply, {no_work}, State}
             end
 
@@ -103,7 +106,7 @@ handle_call({work_complete, Pkg}, From, State) ->
     end;
 
 handle_call(status, _From, State) ->
-    io:format("todo = ~p; in_progress = ~w~n",
+    fsw_eventlog:info_msg("todo = ~p; in_progress = ~w~n",
               [State#state.todo, State#state.inprogress]),
     {reply, ok, State};
 

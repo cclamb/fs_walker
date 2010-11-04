@@ -7,11 +7,11 @@
 -module(fsw_node_sup).
 -behavior(supervisor).
 
--export([start_link/2]).
+-export([start_link/3]).
 -export([init/1]).
 
 %% Start the workers in the node.
-start_link(ClientCount, Callback) ->
+start_link(_Node, ClientCount, Callback) ->
     error_logger:info_msg("fsw_node_sup: ~w/~w~n", [ClientCount, Callback]),
     supervisor:start_link(?MODULE, [ClientCount, Callback]).
 
