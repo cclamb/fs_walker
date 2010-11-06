@@ -1,4 +1,4 @@
--module(fsw_app_sup).
+-module(fsw_client_sup).
 -behavior(supervisor).
 -export([start_link/0, init/1]).
 
@@ -9,10 +9,8 @@
 start_link() ->
     fsw_eventlog:info_msg("Got to app_sup:start_link called~n", []),       
     supervisor:start_link({local, ?SERVER}, ?MODULE, []).
-
     
 init(_Args) ->
-    %% Bob --- need to get directory, clients, nodes from here, or in config file. 
     fsw_eventlog:info_msg("Got to init~n", []),   
     {ok, LogFile} = application:get_env(logfile),
     {ok, Root} = application:get_env(directory),
@@ -21,24 +19,9 @@ init(_Args) ->
     {ok, NodeList} = application:get_env(nodelist),
 
     {ClientCount,  _Stuff} = string:to_integer(ClientInt),
-    contact_nodes(NodeList),
-    global:sync(),
 
-%%     fsw_eventlog:info_msg("Got logfile ~s~n", [LogFile]),
-%%     fsw_eventlog:info_msg("Got Root ~s~n", [Root]),
-%%     fsw_eventlog:info_msg("Got Client Count ~w~n", [ClientCount]),
-%%     fsw_eventlog:info_msg("Got Callback module ~w~n", [CallbackModule]),
-%%     fsw_eventlog:info_msg("Got Node list ~p~n", [NodeList]),
-    
-    %% Spawn the event logger
-    EventLogger = fsw_eventlog:server_name(),
-    EventLog = {fsw_eventlog, {gen_event, start_link, [EventLogger]},
-                permanent, 2000, worker, [gen_event]},
-    
-    %% Spawn the server
-    Server = {fsw_blackboard, {fsw_blackboard, start_link, [LogFile, [Root]]},
-              permanent, 2000, worker, [fsw_blackboard]},
-    
+    contact_nodes(NodeList),    
+
 %%     %% spawn the node-managers --- this may need to be some sort of 
 %%     %% dynamic creation in the long run --- cause you need to spawn-link
 %%     %% across nodes.
@@ -50,28 +33,27 @@ init(_Args) ->
     
 %%     %%  We really need a fsw_distributed_nodes_sup here
 
-    NodeMod = fsw_rnode_sup,
+    NodeMod = fsw_node_sup,
     NodeMgr = {NodeMod, {NodeMod,
                          start_link,
                          [worker@s919538, ClientCount, CallbackModule]},
                permanent, 2000, worker, [NodeMod]},
 
-    Children = [EventLog, Server, NodeMgr],
+    Children = [NodeMgr],
 
 
     RestartStrategy = {one_for_one, 0, 1},
     {ok, {RestartStrategy, Children}}.
 
 contact_nodes([])->
-    error_logger:info_msg("Nodes contacted: ~w~n", [nodes()]),    
+    error_logger:info_msg("contact nodes: ~w~n", [nodes()]),    
     ok;
 
 contact_nodes([Node | Rest])->
-%    io:format("Ping to ~w~n", [Node]),
+    error_logger:info_msg("Ping to ~w~n", [Node]),
     case net_adm:ping(Node) of
         pong -> 
             contact_nodes(Rest);
-        Other  ->
-            error_logger:error_msg("Unable to contact node ~w~n", [ Node ]),
-            {error, Other}
+        Other  -> error_logger:error_msg("Unable to contact node ~w~n", [ Node ]),
+                   {error, Other}
     end.

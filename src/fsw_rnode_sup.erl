@@ -7,22 +7,27 @@
 -export([start_link/3, init/1, terminate/2]).
 
 start_link(Node, Clients, CallbackModule) ->
-    error_logger:info_msg("in fsw_rnode_sup:it node = ~p/~w/~w~n", [Node, Clients, CallbackModule]),
+    error_logger:info_msg("in fsw_rnode_sup:start_link node = ~p/~w/~w~n", [Node, Clients, CallbackModule]),
     supervisor_bridge:start_link(?MODULE, [Node, Clients, CallbackModule]).
 
 init([Node, Clients, CallbackModule]) ->
-    error_logger:info_msg("fsw_rnode_sup:init node = ~p (~p) ~n", [node(), Node]),
     % needed?
-    Pid = proc_lib:spawn_link(Node,
-                              fsw_node_sup,
+    error_logger:info_msg(
+      "fsw_rnode_sup: Attempting spawn to (~p) from ~p ~n", [Node, node()]),
+
+    Pid = spawn_link(Node,
+                     fsw_node_sup,
                      start_link,
-                     [Clients, CallbackModule]),
+                     [Node, Clients, CallbackModule]),
     {ok, Pid, Pid}.
 
 terminate(Reason, State) ->
     case Reason of 
-        shutdown -> ok;
+        shutdown ->
+            fsw_eventlog:info_msg("SHUTDOWN of fsw_node_sup~n",[]),
+            ok;
         _Other  ->
-            fsw_eventlog:info_msg("Death of remote fsw_node_sup:process_died~n",[]),
+            fsw_eventlog:info_msg(
+              "Other death of remote fsw_node_sup:~n",[]),
             ok
     end.

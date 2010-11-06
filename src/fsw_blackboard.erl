@@ -15,9 +15,23 @@
 
 -define(SERVER, fsw_blackboard).
 
+%%% How do we represent inprogress, and what to do on failure of client that
+%%% has the work?
+-record(state, {todo =[], inprogress=[] }).
+
 start_link(LogFile, RootList) ->
-    gen_server:start_link({global, ?SERVER}, ?MODULE,
-                          [LogFile, RootList], []).
+    error_logger:info_msg("blackboard: start_link!~n", []),
+    gen_server:start_link({global, ?SERVER}, ?MODULE, [LogFile, RootList],[]).
+
+init([LogFile, RootList]) ->
+    fsw_eventlog_handler:add_handler(LogFile),
+    error_logger:info_msg("on node ~w: Registered Names=~w~n",
+                          [node(), global:registered_names()]),
+    
+    %% Set the todo list to a list of directories.
+    ToDo = lists:map(fun(X)-> make_dir_pkg(X) end, RootList),
+    fsw_eventlog:info_msg("Todo = ~p~n", [ToDo]),
+    {ok, #state{todo=ToDo}}.
 
 stop(_State) -> ok.
 
@@ -30,28 +44,19 @@ stop(_State) -> ok.
 %%%        add_files ?? -> ok
 %%%        work_done pkg -> ok
 
-%%% How do we represent inprogress, and what to do on failure of client that
-%%% has the work?
--record(state, {todo =[], inprogress=[] }).
 
-is_done(#state{todo=[], inprogress=[]}) ->   true;
-is_done(_) -> false.
+%% is_done(#state{todo=[], inprogress=[]}) ->   true;
+%% is_done(_) -> false.
 
 make_dir_pkg(X) ->
     Absdir = filename:absname(X),
-    {directory,
-     list_to_binary("."),
-     list_to_binary(Absdir)}.
-
-init([LogFile, RootList]) ->
-    fsw_eventlog_handler:add_handler(LogFile),
-    fsw_eventlog:info_msg("Blackboard started with rootlist~n", []),
-    %% Set the todo list to a list of directories.
-    ToDo = lists:map(fun(X)-> make_dir_pkg(X) end, RootList),
-    {ok, #state{todo=ToDo}}.
+    {directory, list_to_binary("."), list_to_binary(Absdir)}.
 
 %%% Synchronous calls...
-get_work() ->  gen_server:call({global, ?SERVER}, {get_work}).
+get_work() ->
+    error_logger:info_msg("GetWork: on node ~w: Registered Names=~w~n",
+                          [node(), global:registered_names()]),
+    gen_server:call({global, ?SERVER}, {get_work}).
 
 status() ->  gen_server:call({global, ?SERVER}, status).
 
@@ -83,11 +88,11 @@ handle_call({get_work}, {FromPid, _FromTag} , State)->
             case State#state.inprogress of
                 [] ->
                     %% Nothing in progress or to do
-                    fsw_eventlog:info_msg("Returning done ~n", []),
+                    error_logger:info_msg("Returning done ~n", []),
                     {reply, {done}, State};
 
                 [_H | _T ] ->
-                    fsw_eventlog:info_msg("Returning no_work ~n", []),
+                    error_logger:info_msg("Returning no_work ~n", []),
                     {reply, {no_work}, State}
             end
 
@@ -106,7 +111,7 @@ handle_call({work_complete, Pkg}, From, State) ->
     end;
 
 handle_call(status, _From, State) ->
-    fsw_eventlog:info_msg("todo = ~p; in_progress = ~w~n",
+    error_logger:info_msg("todo = ~p; in_progress = ~w~n",
               [State#state.todo, State#state.inprogress]),
     {reply, ok, State};
 

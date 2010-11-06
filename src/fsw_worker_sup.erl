@@ -7,7 +7,8 @@
 -export([init/1, terminate/2]).
 
 start_link(CallbackModule, Index, MaxClients) ->
-    supervisor_bridge:start_link(fsw_worker_sup, [CallbackModule, Index, MaxClients]).
+    supervisor_bridge:start_link(fsw_worker_sup,
+                                 [CallbackModule, Index, MaxClients]).
 
 init([CallbackModule, Index, MaxClients]) ->
     Pid = spawn_link(fsw_worker, init, [CallbackModule, Index, MaxClients]),

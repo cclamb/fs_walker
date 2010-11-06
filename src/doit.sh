@@ -4,10 +4,11 @@
 #
 
 /bin/rm -f client*.out fsw.log fsw_sasl.log
-erlc -o ../ebin *.erl
+#erlc -o ../ebin *.erl
 
 #erl -pa ../ebin/ -noshell -boot start_sasl -config sasl_log \
 #    -s fsw_toplevel start  -s init stop -fswalker logfile "$1" -fswalker directory \"$2\"
+#erl -pa ../ebin/ -sname worker
 
-erl -pa ../ebin/ -noshell -boot start_sasl -config sasl_log -s fsw_toplevel start  -fswalker directory \"$1\"
+erl -pa ../ebin/  -sname master -boot start_sasl -config fsw -s fsw_toplevel start  -fswalker directory \"$1\"
 

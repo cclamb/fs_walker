@@ -10,11 +10,11 @@
 
 init([LogFile]) ->
     error_logger:logfile({open, LogFile}),
-    error_logger:tty(false),
+%%    error_logger:tty(false),
     {ok, #state{}}.
 
 add_handler(LogFile) ->
-    fsw_eventlog:info_msg("Adding handler from ~w~n", [?MODULE]),
+    error_logger:info_msg("Adding handler from ~w~n", [?MODULE]),
     fsw_eventlog:add_handler(?MODULE, [LogFile]).
 
 delete_handler() ->
