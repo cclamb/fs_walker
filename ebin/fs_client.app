@@ -16,8 +16,9 @@
   {registered, []},
   {applications, [kernel, stdlib]},
   {env, [
-         {master_node, master@s919538},
-         {clients_per_node, "3"},
+         {master_node, master@rsqlogin01},
+         {clients_per_node, "10"},
+         {max_files_per_block, "512"},
          {callback_module, visitor_callback}
         ]},
   {mod, {fsw_client_app, [] }}

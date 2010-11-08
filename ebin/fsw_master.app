@@ -9,9 +9,9 @@
             ]},
   {registered, [fsw_master_server]},
   {applications, [kernel, stdlib]},
-  {env, [ {clients_per_node, "5"},
-          {nodelist, [worker@s919538]},
-          {master_node_is_client, true}
+  {env, [ 
+          {nodelist, []},
+          {master_node_is_client, false}
         ]},
   {mod, {fsw_master_app, [] }}
  ]}.

@@ -11,9 +11,10 @@
             ]},
   {registered, [fsw_blackboard, fsw_eventlog]},
   {applications, [kernel, stdlib]},
-  {env, [ {logfile, "fsw.log"},
+  {env, [
+          {logfile, "fsw.log"},
  	  {show_tty, true},
-          {directory, "/Users/raballa/Documents/"}
+          {directory, "."}
         ]},
   {mod, {fsw_server_app, [] }}
  ]}.

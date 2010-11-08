@@ -11,9 +11,9 @@
 
 -export([start/1, init/3, loop/1]).
 
--record(state, {callback_module, callback_data}).
+-record(state, {callback_module, callback_data, files_per_block}).
 
--define(MAX_FILES_PER_PKG, 10).
+%-define(MAX_FILES_PER_PKG, 256).
 -define(SLEEPMSEC, 500).
 
 % Args is a lsit [CallbackModule, Index]
@@ -24,8 +24,11 @@ init(CallbackModule, Index, MaxClients) ->
     case apply({CallbackModule, init}, [node(), Index, MaxClients]) of
         {ok, State } ->
             try
-                fsw_eventlog:info_msg("worker starts looping~n", []),
-                loop(#state{callback_module=CallbackModule, callback_data=State})
+	        {ok, PackageSize} = application:get_env(max_files_per_block),
+	        {PackageSizeInt, _Stuff} = string:to_integer(PackageSize),
+                fsw_eventlog:info_msg("worker starts looping blocksize= ~w~n", [PackageSizeInt]),
+                loop(#state{callback_module=CallbackModule, callback_data=State, 
+			    files_per_block=PackageSizeInt})
             after
                 fsw_eventlog:info_msg("worker done looping~n", []),
                 apply({CallbackModule, finalize}, [State])
@@ -103,7 +106,7 @@ perform_work_package(State, {directory, BinDir, RootDir}) ->
             visit_files(State, Files, Dir, list_to_binary(Dir)),
             visit_directory(State, Dir, post);
         {skip} ->
-            fsw_eventlog:info_message("Skippping visit to directory ~p (~p) ~n", [Dir]);
+            fsw_eventlog:info_message("Skipping visit to directory ~p (~p) ~n", [Dir]);
         
         {error, Why } ->
             fsw_eventlog:info_message("Unable to visit directory ~p (~p) ~n", [Dir, Why])
@@ -159,7 +162,7 @@ add_filtered_files([ H | T ], ResultFiles, BinDir) ->
 %%% visit_files/3 traverses a list of files and splits it into blocks of size MAX_FILES_PER_PKG.
 %%% It also processes the files in the final block
 visit_files(State, FileList, Dir, BinDir) ->
-    case catch(lists:split(?MAX_FILES_PER_PKG, FileList)) of
+    case catch(lists:split(State#state.files_per_block, FileList)) of
         %% Calling lists:split on a list  shorter than MAX_FILES_PER_PKG throws an exception
         %% In this case, just process the files
         {'EXIT', _Why } ->
