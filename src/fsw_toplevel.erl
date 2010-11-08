@@ -10,7 +10,7 @@
 -export([start/1, start/0, start_test/0]).
 
 start() ->
-     start(fswalker).
+    start(fsw_master).
 
 start_test() ->
      start(fswtest).

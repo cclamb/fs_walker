@@ -1,4 +1,4 @@
--module(fsw_server).
+-module(fsw_server_app).
 -behaviour(application).
 -export([start/2, stop/1]).
 

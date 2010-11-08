@@ -1,20 +1,20 @@
 -module(visitor_callback).
 
--export([init/2, finalize/1, visit_file/2, visit_directory/3, ok_to_visit/3]).
+-export([init/3, finalize/1, visit_file/2, visit_directory/3, ok_to_visit/3]).
 
 -record(state, {module=?MODULE, rank=0, io_dev, filename}).
 
 -include_lib("kernel/include/file.hrl").
 
 %%% 
-%%% init takes 1 argument (integer) as an indentifier for the client
+%%% init takes 3 argument (integer) as an indentifier for the client
 %%% init returns a State object for the callback module.
 %%%
 %%% -- in this example, the state contains the file name and an IO handle.
 %%%
-init(Index, MaxClients) ->
+init(FileBase, Index, MaxClients) ->
     fsw_eventlog:info_msg("Initializing client ~w of ~w~n", [Index, MaxClients]),
-    FileName = lists:concat(["client.", Index, ".", MaxClients, ".out"]),
+    FileName = lists:concat([FileBase, ".", Index, ".", MaxClients, ".out"]),
     case file:open(FileName, [append]) of
         {ok, IoDev} ->
             State = #state{rank=Index, io_dev=IoDev, filename=FileName},

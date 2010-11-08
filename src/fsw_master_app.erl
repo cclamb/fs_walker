@@ -1,9 +1,11 @@
--module(fsw_client).
+%% 
+%%
+-module(fsw_master_app).
 -behaviour(application).
 -export([start/2, stop/1]).
 
 start(_Type, _StartArgs) ->
-    case fsw_client_sup:start_link() of
+    case fsw_master_sup:start_link() of
         {ok, Pid} ->
             {ok, Pid};
         Other -> 
@@ -11,8 +13,8 @@ start(_Type, _StartArgs) ->
     end.
 
 stop(_State) ->
-    error_logger:info_msg("fsw_client Stopped ~n", []),
-    %% init:stop(),
+    fsw_eventlog:info_msg("fsw_app: Stopped ~n", []),
+    init:stop(),
     ok.
 
     

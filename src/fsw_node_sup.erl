@@ -13,15 +13,16 @@
 %% Start the workers in the node.
 start_link(_Node, ClientCount, Callback) ->
     error_logger:info_msg("fsw_node_sup: running on node ~w: ~w/~w~n", [node(), ClientCount, Callback]),
-
-%%% Need to propagate names
-%%    global:sync(),
-%%% Need to propagate names
+    
+    %% Need to propagate names
+    %%    global:sync(),
+    %% Need to propagate names
     error_logger:info_msg("Registered names are ~w~n", [global:registered_names()]),    
     supervisor:start_link(?MODULE, [ClientCount, Callback]).
 
 init([ClientCount, Callback]) ->
-    error_logger:info_msg("fsw_node_sup: (init) node ~w: ~w/~w~n", [node(), ClientCount, Callback]),
+    error_logger:info_msg("fsw_node_sup: (init) node ~w: ~w/~w~n",
+                          [node(), ClientCount, Callback]),
     Children = build_child_list(ClientCount, Callback, ClientCount, []),
     {ok, {{one_for_one, 0, 60},  Children}}.
 

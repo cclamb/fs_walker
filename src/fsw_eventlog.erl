@@ -9,20 +9,13 @@
          access_timeout/1, orphan_died/0, orphan_died/1,
          worker_died/1, visit_update/1,
          info_message/2, warning_message/2, error_message/2,
-         info_msg/2, warning_msg/2, error_msg/2]).
+         info_msg/2, warning_msg/2, error_msg/2,
+         call/2]).
 
 -define(SERVER, ?MODULE).
 
-server_name() ->
-    {global, ?SERVER}.
+server_name() ->  {global, ?SERVER}.
     
-%%start_link() ->
-%%    gen_event:start_link({global, ?SERVER}),
-
-%% init(LogFile) ->
-%%     fsw_eventlog:info_msg("Added event handler
-%% andler for  ~w~n", [LogFile]),    
-
 add_handler(Handler, Args) ->
     gen_event:add_handler({global, ?SERVER}, Handler, Args).
 
@@ -57,3 +50,5 @@ info_msg(Msg, Args) ->  gen_event:notify({global, ?SERVER}, {info, Msg, Args}).
 warning_msg(Msg, Args) ->  gen_event:notify({global, ?SERVER}, {warning, Msg, Args}).
 error_msg(Msg, Args) ->  gen_event:notify({global, ?SERVER}, {error, Msg, Args}).
 
+call(Handler, Request) ->
+     gen_event:call({global, ?SERVER}, Handler, Request).

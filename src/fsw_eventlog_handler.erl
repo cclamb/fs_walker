@@ -1,21 +1,23 @@
 % Module based on Erlang and OTP/sc_event_logger (page 184ff)
 -module(fsw_eventlog_handler).
 -behaviour(gen_event).
--export([add_handler/1, delete_handler/0]).
+-export([add_handler/2, delete_handler/0]).
 
 -export([init/1, handle_event/2, handle_call/2,
          handle_info/2, code_change/3, terminate/2]).
 
+-export([files_visited/0]).
+
 -record(state, {file_errors=0, directory_errors=0, visited=0, timeouts=0}).
 
-init([LogFile]) ->
+init([LogFile, UseTTY]) ->
     error_logger:logfile({open, LogFile}),
-%%    error_logger:tty(false),
+    error_logger:tty(UseTTY),
     {ok, #state{}}.
 
-add_handler(LogFile) ->
+add_handler(LogFile, UseTTY) ->
     error_logger:info_msg("Adding handler from ~w~n", [?MODULE]),
-    fsw_eventlog:add_handler(?MODULE, [LogFile]).
+    fsw_eventlog:add_handler(?MODULE, [LogFile, UseTTY]).
 
 delete_handler() ->
     fsw_eventlog:delete_handler(?MODULE, []).
@@ -75,6 +77,9 @@ handle_event(Event, State) ->
     {ok, State}.
 
 %% Stubs for call-backs.
+handle_call({files_visited}, State) ->
+    {ok, State#state.visited, State};
+
 handle_call(_Request, State) ->  {ok, ok, State}.
 
 handle_info(_Info, State) -> {ok, State}.
@@ -82,4 +87,8 @@ handle_info(_Info, State) -> {ok, State}.
 terminate(_Reason, _State) ->    ok.
 
 code_change(_OldVsn, State, _Extra) ->   {ok, State}.
+
+
+files_visited() -> fsw_eventlog:call(?MODULE, {files_visited}).
+
 

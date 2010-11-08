@@ -1,4 +1,4 @@
-% Workload server
+%% Workload server
 -module(fsw_blackboard).
 -author("raballa@sandia.gov").
 -vsn("0.2.0").
@@ -10,7 +10,8 @@
 -export([init/1, handle_call/3, handle_cast/2,
          handle_info/2, terminate/2, code_change/3]).
 
--export([start_link/2, stop/1, get_work/0, add_work/1, work_complete/1,
+-export([start_link/3, stop/1, get_work/0, add_pkg/1,
+         add_work/1, work_complete/1,
          status/0, process_died/1]).
 
 -define(SERVER, fsw_blackboard).
@@ -19,18 +20,22 @@
 %%% has the work?
 -record(state, {todo =[], inprogress=[] }).
 
-start_link(LogFile, RootList) ->
-    error_logger:info_msg("blackboard: start_link!~n", []),
-    gen_server:start_link({global, ?SERVER}, ?MODULE, [LogFile, RootList],[]).
+start_link(LogFile, UseTTY, RootList) ->
+    %%    error_logger:info_msg("blackboard: start_link!~n", []),
+    gen_server:start_link({global, ?SERVER}, ?MODULE, [LogFile, UseTTY, RootList],[]).
 
-init([LogFile, RootList]) ->
-    fsw_eventlog_handler:add_handler(LogFile),
-    error_logger:info_msg("on node ~w: Registered Names=~w~n",
-                          [node(), global:registered_names()]),
-    
+%% Create the root of a work package.
+%% This function can't call the server, since it gets called
+%% during initialization
+make_root_pkg(X) ->
+    Absdir = filename:absname(X),
+    {directory, list_to_binary("."), list_to_binary(Absdir)}.
+
+
+init([LogFile, UseTTY, RootList]) ->
+    fsw_eventlog_handler:add_handler(LogFile, UseTTY),
     %% Set the todo list to a list of directories.
-    ToDo = lists:map(fun(X)-> make_dir_pkg(X) end, RootList),
-    fsw_eventlog:info_msg("Todo = ~p~n", [ToDo]),
+    ToDo = lists:map(fun make_root_pkg/1,   RootList),
     {ok, #state{todo=ToDo}}.
 
 stop(_State) -> ok.
@@ -48,28 +53,18 @@ stop(_State) -> ok.
 %% is_done(#state{todo=[], inprogress=[]}) ->   true;
 %% is_done(_) -> false.
 
-make_dir_pkg(X) ->
-    Absdir = filename:absname(X),
-    {directory, list_to_binary("."), list_to_binary(Absdir)}.
 
 %%% Synchronous calls...
-get_work() ->
-    error_logger:info_msg("GetWork: on node ~w: Registered Names=~w~n",
-                          [node(), global:registered_names()]),
-    gen_server:call({global, ?SERVER}, {get_work}).
+add_pkg(Dir) ->  add_work(make_root_pkg(Dir)).
 
-status() ->  gen_server:call({global, ?SERVER}, status).
+get_work() -> gen_server:call({global, ?SERVER}, {get_work}).
 
-work_complete(Pkg) ->
-    gen_server:call({global, ?SERVER}, {work_complete, Pkg}).
+status() -> gen_server:call({global, ?SERVER}, status).
+
+work_complete(Pkg) -> gen_server:call({global, ?SERVER}, {work_complete, Pkg}).
 
 %%% These next elements should be casts, I think...
-add_work(Pkg) ->
-    gen_server:call({global, ?SERVER}, {add_work, Pkg}).
-
-%%% Sets the root directory to an absolute path name, if needed.
-%%set_root(Dir) ->
-%%   add_work({directory, list_to_binary("."), list_to_binary(filename:absname(Dir))}).
+add_work(Pkg) ->  gen_server:call({global, ?SERVER}, {add_work, Pkg}).
 
 %%% Called from Error Handler
 process_died(Pid) ->  gen_server:cast({global, ?SERVER}, {pid_died, Pid}).

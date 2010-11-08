@@ -21,7 +21,7 @@ start(Args) ->
     spawn(?MODULE, init, Args).
 
 init(CallbackModule, Index, MaxClients) ->
-    case apply({CallbackModule, init}, [Index, MaxClients]) of
+    case apply({CallbackModule, init}, [node(), Index, MaxClients]) of
         {ok, State } ->
             try
                 fsw_eventlog:info_msg("worker starts looping~n", []),
