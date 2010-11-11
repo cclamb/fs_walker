@@ -1,8 +1,5 @@
 %%% This works!
 
-%%% but we need to integrate the path names....
-%%% Tag == BinDir == directory to visit right now.
-%%% 
 %%% Be given a filter/function to apply to file.
 %%%
 -module(fsw_worker).

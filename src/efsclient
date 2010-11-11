@@ -1,0 +1,38 @@
+#!/bin/bash
+# -W worker name
+
+
+SCRIPT=efsclient
+ERL=$HOME/bin/erl
+EBIN=$HOME/src/fs_walker/ebin
+WORKER_NAME=worker
+
+OUTDIR=/gscratch1/raballa/data
+
+if [ -r .efswalkrc ]; then
+    . .efswalkrc
+else
+    if [ -r $HOME/.efswalkrc ]; then
+        . $HOME/.efswalkrc
+    fi
+fi
+
+while getopts ":hW:" Option
+do
+  case $Option in
+      # Master app options
+      h )
+          echo "$SCRIPT: You're on your own, kid"
+          exit
+          ;;
+          # Specify the configuration file
+      W )
+          WORKER_NAME=$OPT_ARG
+  esac
+done
+shift $(($OPTIND - 1))
+
+cd $OUTDIR; $ERL -pa $EBIN  -sname $WORKER_NAME -config fsw 
+
+
+

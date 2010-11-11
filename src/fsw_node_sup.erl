@@ -21,8 +21,8 @@ start_link(_Node, ClientCount, Callback) ->
     supervisor:start_link(?MODULE, [ClientCount, Callback]).
 
 init([ClientCount, Callback]) ->
-%    error_logger:info_msg("fsw_node_sup: (init) node ~w: ~w/~w~n",
-%                          [node(), ClientCount, Callback]),
+    fsw_eventlog:error_msg("fsw_node_sup: (init) node ~w: ~w/~w~n",
+                          [node(), ClientCount, Callback]),
     Children = build_child_list(ClientCount, Callback, ClientCount, []),
     {ok, {{one_for_one, 0, 60},  Children}}.
 

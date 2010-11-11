@@ -25,7 +25,7 @@ delete_handler() ->
     fsw_eventlog:delete_handler(?MODULE, []).
 
 handle_event({work_added, Pkg}, State) ->
-    error_logger:info_msg("work added(~p)~n", [Pkg]),
+    %%error_logger:info_msg("work added(~p)~n", [Pkg]),
     {ok, State};
 
 handle_event({orphan_died}, State) ->
@@ -42,7 +42,7 @@ handle_event({process_died, Pid}, State) ->
     {ok, State};
 
 handle_event({orphan_work, Pid}, State) ->
-    error_logger:info_msg("Pid ~p) reports work done, but work not assigned", [Pid]),
+    error_logger:warning_msg("Pid ~p) reports work done, but work not assigned", [Pid]),
     {ok, State#state{file_errors = State#state.file_errors + 1}};
 
 handle_event({file_error, FileName, Reason}, State) ->
@@ -58,8 +58,7 @@ handle_event({fs_timeout, FileName}, State) ->
     {ok, State#state{timeouts = State#state.timeouts + 1}};
 
 handle_event({visited, Count}, State) ->
-    error_logger:info_msg("~w files visited so far~n",
-                              [State#state.visited + Count]),
+    %error_logger:info_msg("~w files visited so far~n", [State#state.visited + Count]),
     {ok, State#state{visited = State#state.visited + Count}};
 
 %% Stubs for call-backs.

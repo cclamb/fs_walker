@@ -19,7 +19,10 @@ init(_Args) ->
     %% this value comes from the fs_client.app file, and is
     %% not overridden from fsw.config
     {ok, ClientInt} = application:get_env(clients_per_node),
+    fsw_eventlog:warning_msg("Clients per node is ~p~n", [ClientInt]),
     {ClientCount,  _Stuff} = string:to_integer(ClientInt),
+    fsw_eventlog:warning_msg("Client  count is is ~w~n", [ClientInt]),
+
     {ok, CallbackModule} = application:get_env(callback_module),
     fsw_eventlog:client_count(ClientCount),
     NodeMod = fsw_node_sup,

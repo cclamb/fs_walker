@@ -10,7 +10,6 @@
 # -B files_per_block
 # -c config file!
 
-/bin/rm -f *.out fsw.log fsw_sasl.log
 #erlc -o ../ebin *.erl
 
 #erl -pa ../ebin/ -noshell -boot start_sasl -config sasl_log \
@@ -18,12 +17,14 @@
 
 SCRIPT=efswalk
 ERL=erl
+EBIN=$HOME/src/fs_walker/ebin
 OPT_MASTER=""
 OPT_SERVER=""
 OPT_CLIENT=""
-CONFIG_FILE=fsw
+CONFIG_FILE=$PWD/fsw
 OPT_NOSHELL=""
 MASTER_NAME=master
+OUT_DIR=/gscratch1/raballa/data
 
 if [ -r .efswalkrc ]; then
     . .efswalkrc
@@ -97,9 +98,9 @@ if [ -n "$ROOT_DIR" ]; then
     OPT_SERVER="$OPT_SERVER -fs_server directory \"$ROOT_DIR\""
 fi
 
-#erl -pa ../ebin/ -sname master -boot start_sasl -config fs1 -s fsw_toplevel start  -fs_server directory \"$1\" 
+#/bin/rm -f $OUT_DIR/*.out fsw.log fsw_sasl.log
 
-ERL -pa ../ebin/ $OPT_NOSHELL -sname $MASTER_NAME -boot start_sasl -config $CONFIG_FILE -s fsw_toplevel start $OPT_MASTER $OPT_SERVER $OPT_CLIENT
+$ERL -pa $EBIN $OPT_NOSHELL -boot start_sasl -config $CONFIG_FILE -sname $MASTER_NAME -s fsw_toplevel start $OPT_MASTER $OPT_SERVER $OPT_CLIENT 
 
 
 
