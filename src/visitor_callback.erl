@@ -76,7 +76,7 @@ my_visit_file(State, Filename, regular, FileData)  ->
 %%% This clause handles any other cases, like links.
 %%%
 my_visit_file(_State, Filename, Other, _FileData) ->
-    fsw_eventlog:info_message("Ignoring OTHER (~w) file  ~s ~n", [Other, Filename]).
+    fsw_eventlog:info_msg("Ignoring OTHER (~w) file  ~s ~n", [Other, Filename]).
 
 %%% Predicate - returns {ok}/{skip}/{error, Reason}
 %%% This function neeeds to be filled out!

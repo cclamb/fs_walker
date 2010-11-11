@@ -21,7 +21,6 @@
 -record(state, {todo =[], inprogress=[] }).
 
 start_link(LogFile, UseTTY, RootList) ->
-    %%    error_logger:info_msg("blackboard: start_link!~n", []),
     gen_server:start_link({global, ?SERVER}, ?MODULE, [LogFile, UseTTY, RootList],[]).
 
 %% Create the root of a work package.
@@ -83,11 +82,11 @@ handle_call({get_work}, {FromPid, _FromTag} , State)->
             case State#state.inprogress of
                 [] ->
                     %% Nothing in progress or to do
-                    error_logger:info_msg("Returning done ~n", []),
+                    fsw_eventlog:info_msg("Returning done ~n", []),
                     {reply, {done}, State};
 
                 [_H | _T ] ->
-                    error_logger:info_msg("Returning no_work ~n", []),
+                    fsw_eventlog:info_msg("Returning no_work ~n", []),
                     {reply, {no_work}, State}
             end
 
@@ -106,8 +105,8 @@ handle_call({work_complete, Pkg}, From, State) ->
     end;
 
 handle_call(status, _From, State) ->
-    error_logger:info_msg("todo = ~p; in_progress = ~w~n",
-              [State#state.todo, State#state.inprogress]),
+    fsw_eventlog:info_msg("todo = ~p; in_progress = ~w~n",
+                          [State#state.todo, State#state.inprogress]),
     {reply, ok, State};
 
 %%%

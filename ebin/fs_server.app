@@ -12,9 +12,9 @@
   {registered, [fsw_blackboard, fsw_eventlog]},
   {applications, [kernel, stdlib]},
   {env, [
-          {logfile, "fsw.log"},
- 	  {show_tty, true},
-          {directory, "."}
+         {logfile, "fsw.log"},
+         {show_tty, false},
+         {directory, "."}
         ]},
   {mod, {fsw_server_app, [] }}
  ]}.

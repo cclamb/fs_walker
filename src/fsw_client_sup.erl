@@ -21,7 +21,7 @@ init(_Args) ->
     {ok, ClientInt} = application:get_env(clients_per_node),
     {ClientCount,  _Stuff} = string:to_integer(ClientInt),
     {ok, CallbackModule} = application:get_env(callback_module),
-
+    fsw_eventlog:client_count(ClientCount),
     NodeMod = fsw_node_sup,
     NodeMgr = {NodeMod, {NodeMod,
                          start_link,

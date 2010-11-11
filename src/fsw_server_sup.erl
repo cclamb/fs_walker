@@ -12,7 +12,6 @@ start_link() ->
 
 init(_Args) ->
     %% Bob --- need to get directory, clients, nodes from here, or in config file. 
-    error_logger:info_msg("Got to init~n", []),   
     {ok, LogFile} = application:get_env(logfile),
     {ok, Root} = application:get_env(directory),
     {ok, UseTTY} = application:get_env(show_tty),

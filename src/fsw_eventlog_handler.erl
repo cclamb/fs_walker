@@ -6,9 +6,11 @@
 -export([init/1, handle_event/2, handle_call/2,
          handle_info/2, code_change/3, terminate/2]).
 
--export([files_visited/0]).
+-export([files_visited/0, client_count/0, node_count/0, file_errors/0, directory_errors/0]).
 
--record(state, {file_errors=0, directory_errors=0, visited=0, timeouts=0}).
+-record(state, {file_errors=0, directory_errors=0,
+                visited=0, timeouts=0,
+                client_count=0, node_count=0}).
 
 init([LogFile, UseTTY]) ->
     error_logger:logfile({open, LogFile}),
@@ -60,8 +62,13 @@ handle_event({visited, Count}, State) ->
                               [State#state.visited + Count]),
     {ok, State#state{visited = State#state.visited + Count}};
 
-handle_event({info, Msg, Args}, State) ->
-    error_logger:info_msg(Msg, Args),
+%% Stubs for call-backs.
+handle_event({client_count, Count}, State) ->
+    {ok, State#state{client_count=Count} };
+
+handle_event({info, _Msg, _Args}, State) ->
+    %% Make this a variable?
+%    error_logger:info_msg(Msg, Args),
     {ok, State};
 
 handle_event({warning, Msg, Args}, State) ->
@@ -80,6 +87,19 @@ handle_event(Event, State) ->
 handle_call({files_visited}, State) ->
     {ok, State#state.visited, State};
 
+%% Stubs for call-backs.
+handle_call({client_count}, State) ->
+    {ok, State#state.client_count, State};
+
+handle_call({node_count}, State) ->
+    {ok, State#state.node_count, State};
+
+handle_call({file_errors}, State) ->
+    {ok, State#state.file_errors, State};
+
+handle_call({directory_errors}, State) ->
+    {ok, State#state.directory_errors, State};
+
 handle_call(_Request, State) ->  {ok, ok, State}.
 
 handle_info(_Info, State) -> {ok, State}.
@@ -88,7 +108,12 @@ terminate(_Reason, _State) ->    ok.
 
 code_change(_OldVsn, State, _Extra) ->   {ok, State}.
 
-
 files_visited() -> fsw_eventlog:call(?MODULE, {files_visited}).
+
+client_count() -> fsw_eventlog:call(?MODULE, {client_count}).
+
+node_count() -> fsw_eventlog:call(?MODULE, {node_count}).
+file_errors() -> fsw_eventlog:call(?MODULE, {file_errors}).
+directory_errors() -> fsw_eventlog:call(?MODULE, {directory_errors}).
 
 

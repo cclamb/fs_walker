@@ -10,7 +10,7 @@
   {registered, [fsw_master_server]},
   {applications, [kernel, stdlib]},
   {env, [ 
-          {nodelist, []},
+          {nodelist_file, "fsw_nodelist.txt"},
           {master_node_is_client, false}
         ]},
   {mod, {fsw_master_app, [] }}

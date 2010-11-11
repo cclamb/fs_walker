@@ -19,6 +19,7 @@
          {master_node, master@rsqlogin01},
          {clients_per_node, "10"},
          {max_files_per_block, "512"},
+         {client_sleep_msec, "500"},
          {callback_module, visitor_callback}
         ]},
   {mod, {fsw_client_app, [] }}

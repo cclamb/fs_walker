@@ -1,0 +1,105 @@
+#!/bin/bash
+# $1 is the directory, if present
+#
+# -W worker name
+# -M master name
+#
+# -m master is client
+# -v tty
+# -C clients_per_node
+# -B files_per_block
+# -c config file!
+
+/bin/rm -f *.out fsw.log fsw_sasl.log
+#erlc -o ../ebin *.erl
+
+#erl -pa ../ebin/ -noshell -boot start_sasl -config sasl_log \
+#    -s fsw_toplevel start  -s init stop -fswalker logfile "$1" -fswalker directory \"$2\"
+
+SCRIPT=efswalk
+ERL=erl
+OPT_MASTER=""
+OPT_SERVER=""
+OPT_CLIENT=""
+CONFIG_FILE=fsw
+OPT_NOSHELL=""
+MASTER_NAME=master
+
+if [ -r .efswalkrc ]; then
+    . .efswalkrc
+else
+    if [ -r $HOME/.efswalkrc ]; then
+        . $HOME/.efswalkrc
+    fi
+fi
+
+while getopts ":mvhC:B:c:L:M:N:S" Option
+do
+  case $Option in
+      # Master app options
+      h )
+          echo "$SCRIPT: You're on your own, kid"
+          exit
+          ;;
+          # Specify the configuration file
+      c )
+          if [ -r $OPTARG ]; then
+              CONFIG_FILE=$OPTARG
+          else
+              echo "$SCRIPT: Configuration file $OPTARG is not readable"
+              exit;
+          fi
+          ;;
+          # Specify whether to use the master node as a client
+      m ) OPT_MASTER="$OPT_MASTER -fsw_master master_node_is_client true"
+          ;;
+          # Specify name for this node (the master node)
+      M ) MASTER_NAME=$OPTARG
+          ;;
+          # Specify the name of the nodelist file
+      N)
+          if [ -r $OPTARG ]; then
+              OPT_MASTER="$OPT_MASTER -fs_client nodelist_file \"$OPTARG\""
+          else
+              echo "$SCRIPT: Nodelist file $OPTARG  is not readable"
+              exit;
+          fi
+          ;;
+          # Specify to run as NOSHELL
+      S ) OPT_NOSHELL="-noshell"
+          ;;
+
+      # Client  options
+          # Specify the max_files_per_block
+      B)  OPT_CLIENT="$OPT_CLIENT -fs_client max_files_per_block \"$OPTARG\""
+          ;;
+          # Specify the clients_per_node
+      C)  OPT_CLIENT="$OPT_CLIENT -fs_client clients_per_node \"$OPTARG\""
+          ;;
+          # Specify the callback_module
+      V)  OPT_CLIENT="$OPT_CLIENT -fs_client callback_module $OPTARG"
+          ;;
+
+      # Server arguments
+          # Set show_tty to True
+      v ) OPT_SERVER="$OPT_SERVER -fs_server show_tty true"
+          ;;
+          # Change the name of the logfile
+      L ) OPT_SERVER="$OPT_SERVER -fs_server logfile \"$OPTARG\""
+          ;;
+  esac
+done
+shift $(($OPTIND - 1))
+
+ROOT_DIR="$1"
+
+if [ -n "$ROOT_DIR" ]; then
+    OPT_SERVER="$OPT_SERVER -fs_server directory \"$ROOT_DIR\""
+fi
+
+#erl -pa ../ebin/ -sname master -boot start_sasl -config fs1 -s fsw_toplevel start  -fs_server directory \"$1\" 
+
+ERL -pa ../ebin/ $OPT_NOSHELL -sname $MASTER_NAME -boot start_sasl -config $CONFIG_FILE -s fsw_toplevel start $OPT_MASTER $OPT_SERVER $OPT_CLIENT
+
+
+

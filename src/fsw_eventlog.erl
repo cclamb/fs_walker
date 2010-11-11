@@ -2,15 +2,15 @@
 -module(fsw_eventlog).
 
 -export([ % start_link/0,init/1,
-         add_handler/2, delete_handler/2,
-         server_name/0,
-         work_added/1, spurious_complete/1,
-         file_error/2, directory_error/1,
-         access_timeout/1, orphan_died/0, orphan_died/1,
-         worker_died/1, visit_update/1,
-         info_message/2, warning_message/2, error_message/2,
-         info_msg/2, warning_msg/2, error_msg/2,
-         call/2]).
+          add_handler/2, delete_handler/2,
+          server_name/0,
+          work_added/1, spurious_complete/1,
+          file_error/2, directory_error/1,
+          access_timeout/1, orphan_died/0, orphan_died/1,
+          worker_died/1, visit_update/1,
+          client_count/1, node_count/1,
+          info_msg/2, warning_msg/2, error_msg/2,
+          call/2]).
 
 -define(SERVER, ?MODULE).
 
@@ -42,9 +42,8 @@ access_timeout(Filename) ->  gen_event:notify({global, ?SERVER}, {fs_timeout, Fi
 
 visit_update(Count) ->  gen_event:notify({global, ?SERVER}, {visited, Count}).
 
-info_message(Msg, Args) ->  gen_event:notify({global, ?SERVER}, {info, Msg, Args}).
-warning_message(Msg, Args) ->  gen_event:notify({global, ?SERVER}, {warning, Msg, Args}).
-error_message(Msg, Args) ->  gen_event:notify({global, ?SERVER}, {error, Msg, Args}).
+client_count(Count) ->  gen_event:notify({global, ?SERVER}, {client_count, Count}).
+node_count(Count) ->  gen_event:notify({global, ?SERVER}, {node_count, Count}).
 
 info_msg(Msg, Args) ->  gen_event:notify({global, ?SERVER}, {info, Msg, Args}).
 warning_msg(Msg, Args) ->  gen_event:notify({global, ?SERVER}, {warning, Msg, Args}).
@@ -52,3 +51,4 @@ error_msg(Msg, Args) ->  gen_event:notify({global, ?SERVER}, {error, Msg, Args})
 
 call(Handler, Request) ->
      gen_event:call({global, ?SERVER}, Handler, Request).
+

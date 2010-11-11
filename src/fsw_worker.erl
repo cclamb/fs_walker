@@ -11,7 +11,7 @@
 
 -export([start/1, init/3, loop/1]).
 
--record(state, {callback_module, callback_data, files_per_block}).
+-record(state, {callback_module, callback_data, files_per_block, sleep_time_msec}).
 
 %-define(MAX_FILES_PER_PKG, 256).
 -define(SLEEPMSEC, 500).
@@ -24,11 +24,16 @@ init(CallbackModule, Index, MaxClients) ->
     case apply({CallbackModule, init}, [node(), Index, MaxClients]) of
         {ok, State } ->
             try
+	        {ok, SleepTime} = application:get_env(client_sleep_msec),
+                {SleepTimeInt, _Other} = string:to_integer(SleepTime),
+
 	        {ok, PackageSize} = application:get_env(max_files_per_block),
 	        {PackageSizeInt, _Stuff} = string:to_integer(PackageSize),
-                fsw_eventlog:info_msg("worker starts looping blocksize= ~w~n", [PackageSizeInt]),
+
                 loop(#state{callback_module=CallbackModule, callback_data=State, 
-			    files_per_block=PackageSizeInt})
+			    files_per_block=PackageSizeInt,
+                            sleep_time_msec=SleepTimeInt
+                           })
             after
                 fsw_eventlog:info_msg("worker done looping~n", []),
                 apply({CallbackModule, finalize}, [State])
@@ -50,7 +55,7 @@ loop(State) ->
         {no_work}  ->
             %% log sleep
             fsw_eventlog:info_msg("~w sleeping~n", [self()]),
-            timer:sleep(?SLEEPMSEC),
+            timer:sleep(State#state.sleep_time_msec),
             loop(State);
 
         {done}  ->
@@ -63,7 +68,7 @@ loop(State) ->
         
         %% Handle unexpected messages?
         Msg  ->
-            fsw_eventlog:error_message("Unexpected message ~p~n?", [Msg]),
+            fsw_eventlog:error_msg("Unexpected message ~p~n?", [Msg]),
             loop(State)
     end.
 
@@ -106,10 +111,10 @@ perform_work_package(State, {directory, BinDir, RootDir}) ->
             visit_files(State, Files, Dir, list_to_binary(Dir)),
             visit_directory(State, Dir, post);
         {skip} ->
-            fsw_eventlog:info_message("Skipping visit to directory ~p (~p) ~n", [Dir]);
+            fsw_eventlog:info_msg("Skipping visit to directory ~p (~p) ~n", [Dir]);
         
         {error, Why } ->
-            fsw_eventlog:info_message("Unable to visit directory ~p (~p) ~n", [Dir, Why])
+            fsw_eventlog:warning_msg("Unable to visit directory ~p (~p) ~n", [Dir, Why])
     end,
     ok;
 
@@ -124,10 +129,10 @@ perform_work_package(State, {files, FileList, BinDir}) ->
             Files = lists:map(fun binary_to_list/1, FileList),
             visit_files(State, Files, Dir,  BinDir);
         {skip} ->
-            fsw_eventlog:info_message("Skippping visit to directory ~p (~p) ~n", [Dir]);
+            fsw_eventlog:warning_msg("Skipping visit to directory ~p (~p) ~n", [Dir]);
         
         {error, Why } ->
-            fsw_eventlog:info_message("Unable to visit directory ~p (~p) ~n", [Dir, Why])
+            fsw_eventlog:warning_msg("Unable to visit directory ~p (~p) ~n", [Dir, Why])
     end,
     ok.
 %% 

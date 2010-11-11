@@ -16,11 +16,11 @@
 
 %%% How do we represent inprogress, and what to do on failure of client that
 %%% has the work?
--record(state, {server, clients, start_time, end_time}).
+-record(state, {server, clients, start_time, end_time, workers=[]}).
 
 start_link(WorkerNodes) ->
     %% Debug stub!
-    error_logger:info_msg("master: start_link!~n", []),
+%    error_logger:info_msg("master: start_link!~n", []),
     gen_server:start_link({global, ?SERVER}, ?MODULE, [WorkerNodes],[]).
 
 start_client(Node) ->
@@ -28,11 +28,11 @@ start_client(Node) ->
 
 init([WorkerNodes]) ->
     %% Set the todo list to a list of directories.
-    Server = {node(), spawn_link(node(), application, start, [fs_server]), fs_server},
 
+    Server = {node(), spawn_link(node(), application, start, [fs_server]), fs_server},
     Clients = lists:map(fun start_client/1, WorkerNodes),
     %% set the start time?
-    {ok, #state{server=Server, clients=Clients, start_time= erlang:now() }}.
+    {ok, #state{server=Server, clients=Clients, start_time= erlang:now(), workers=WorkerNodes}}.
 
 stop(_State) -> ok.
 
@@ -66,16 +66,27 @@ handle_info(_Info, State) ->
     {noreply, State}.
 
 terminate(Reason, State) ->
-    fsw_eventlog:info_message("Terminating due to ~w~n", [Reason]),
+    fsw_eventlog:info_msg("Terminating due to ~w~n", [Reason]),
     T1 = State#state.start_time,
     T2 = State#state.end_time,
     Visited = fsw_eventlog_handler:files_visited(),
-    fsw_eventlog:info_message("Time elapsed for ~w files is  ~w~n",
-                              [ Visited,
-                               timer:now_diff(T2, T1)]),    
-    io:format("Time elapsed for ~w files is  ~w~n",
-              [Visited, timer:now_diff(T2, T1)]),    
+    ClientCt = fsw_eventlog_handler:client_count(),
+    NodeCt =  length(State#state.workers),
+    FileErrs =  fsw_eventlog_handler:file_errors(),
+    DirErrs =  fsw_eventlog_handler:directory_errors(),
+    fsw_eventlog:warning_msg("Time elapsed for ~w files (~w nodes, ~w clients/node) is  ~w~ (~w file/~w dir) errors~n",
+                             [ Visited,
+                               NodeCt, ClientCt,
+                               timer:now_diff(T2, T1),
+                               FileErrs, DirErrs
+                             ]),    
+    io:format("Time elapsed for ~w files (~w nodes, ~w clients/node) is  ~w (~w file/~w dir) errors~n",
+              [ Visited,  NodeCt, ClientCt,
+                timer:now_diff(T2, T1),
+                FileErrs, DirErrs
+              ]),    
     ok.
+
 
 code_change(_OldVsn, State, _Extra) ->
      {ok, State}.
