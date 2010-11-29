@@ -7,7 +7,7 @@
 -define(SERVER, ?MODULE).
 
 start_link() ->
-    fsw_eventlog:info_msg("Got to server_sup:start_link called~n", []),       
+%%    fsw_eventlog:info_msg("Got to server_sup:start_link called~n", []),       
     supervisor:start_link({local, ?SERVER}, ?MODULE, []).
 
 init(_Args) ->
@@ -19,7 +19,7 @@ init(_Args) ->
     %% Spawn the event logger
     EventLogger = fsw_eventlog:server_name(),
     EventLog = {fsw_eventlog, {gen_event, start_link, [EventLogger]},
-                permanent, 2000, worker, [gen_event]},
+                permanent, 2000, worker, dynamic},
     
     %% Spawn the server
     Server = {fsw_blackboard, {fsw_blackboard, start_link, [LogFile, UseTTY,
@@ -27,5 +27,5 @@ init(_Args) ->
               permanent, 2000, worker, [fsw_blackboard]},
     
     Children = [EventLog, Server],
-    RestartStrategy = {one_for_one, 0, 1},
+    RestartStrategy = {one_for_one, 5, 60},
     {ok, {RestartStrategy, Children}}.

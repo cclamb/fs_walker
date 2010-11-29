@@ -9,11 +9,11 @@
 -export([init/1, terminate/2]).
 
 start_link(Node, SupervisorName, ApplicationName) ->
-    error_logger:info_msg("App Sup startup~wn", [Node, ApplicationName]),       
+%%    error_logger:info_msg("App Sup startup~wn", [Node, ApplicationName]),       
     supervisor_bridge:start_link(SupervisorName,  [Node, ApplicationName]).
 
 init([Node, ApplicationName]) ->
-    error_logger:info_msg("App Sup INIT ~w~n", [Node, ApplicationName]),       
+%%    error_logger:info_msg("App Sup INIT ~w~n", [Node, ApplicationName]),       
     Pid = proc_lib:spawn_link(Node, application, start, [ApplicationName]),
     error_logger:info_msg("App Sup INIT spawn=~w~n", [Pid]),       
     {ok, Pid, Pid}.

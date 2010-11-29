@@ -22,14 +22,18 @@ start_link(_Node, ClientCount, Callback) ->
 
 init([ClientCount, Callback]) ->
     fsw_eventlog:error_msg("fsw_node_sup: (init) node ~w: ~w/~w~n",
-                          [node(), ClientCount, Callback]),
-    Children = build_child_list(ClientCount, Callback, ClientCount, []),
+                           [node(), ClientCount, Callback]),
+    Children = build_child_list(ClientCount, Callback),
     {ok, {{one_for_one, 0, 60},  Children}}.
+
+%% Create the list of child callbacks...
+%% This next function is just an implementation-hiding wrapper
+build_child_list(ClientCount, Callback) ->
+     build_child_list(ClientCount, Callback, ClientCount, []).
 
 build_child_list(0, _Callback, _Max, L) ->  L;
 build_child_list(N, Callback, Max, L) ->
     Name = list_to_atom(lists:concat(["fsworker_", N])),
     Clause = {Name, {fsw_worker_sup, start_link, [Callback, N, Max]},
-              permanent, 2000, supervisor, [fsw_worker_sup]},
+              permanent, infinity, supervisor, [fsw_worker_sup]},
     build_child_list(N-1, Callback, Max, [Clause | L]).
-
