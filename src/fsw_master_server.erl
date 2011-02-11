@@ -10,7 +10,7 @@
 -export([init/1, handle_call/3, handle_cast/2,
          handle_info/2, terminate/2, code_change/3]).
 
--export([start_link/1, stop/1, client_finished/1]).
+-export([start_link/1, stop/1, client_finished/1, print_run_information/6]).
 
 -define(SERVER, ?MODULE).
 
@@ -74,18 +74,36 @@ terminate(Reason, State) ->
     NodeCt =  length(State#state.workers),
     FileErrs =  fsw_eventlog_handler:file_errors(),
     DirErrs =  fsw_eventlog_handler:directory_errors(),
-    fsw_eventlog:warning_msg("Time elapsed for ~w files (~w nodes, ~w clients/node) is  ~w~ (~w file/~w dir) errors~n",
-                             [ Visited,
-                               NodeCt, ClientCt,
-                               timer:now_diff(T2, T1),
-                               FileErrs, DirErrs
-                             ]),    
-    io:format("Time elapsed for ~w files (~w nodes, ~w clients/node) is  ~w (~w file/~w dir) errors~n",
-              [ Visited,  NodeCt, ClientCt,
-                timer:now_diff(T2, T1),
-                FileErrs, DirErrs
-              ]),    
+
+    print_run_information(Visited,
+                          NodeCt, ClientCt,
+                          timer:now_diff(T2, T1),
+                          FileErrs, DirErrs),
     ok.
+
+
+iso_8601_fmt(DateTime) ->
+    {{Year,Month,Day},{Hour,Min,Sec}} = DateTime,
+    io_lib:format("~4.10.0B-~2.10.0B-~2.10.0B ~2.10.0B:~2.10.0B:~2.10.0B",
+        [Year, Month, Day, Hour, Min, Sec]).
+        
+
+print_run_information(FilesVisited, NodeCt, ClientCt, Time, FileErrs, DirErrs) ->
+    fsw_eventlog:warning_msg("Time elapsed for ~w files (~w nodes, ~w clients/node) is  ~w~ (~w file/~w dir) errors~n",
+                                [ FilesVisited,  NodeCt, ClientCt, Time,   FileErrs, DirErrs  ]),    
+    io:format("Time elapsed for ~w files (~w nodes, ~w clients/node) is  ~w (~w file/~w dir) errors~n",
+                        [ FilesVisited,  NodeCt, ClientCt, Time,   FileErrs, DirErrs  ]),    
+
+    FileName = "runs.csv",
+    case file:open(FileName, [append]) of
+        {ok, IoDev} -> 
+              Now = iso_8601_fmt(erlang:localtime()),
+              io:format(IoDev, "~s,~w,~w,~w,~w~n",
+                             [ Now, NodeCt, ClientCt, FilesVisited, Time ]),    
+              file:close(IoDev);
+        {error, Reason} -> 
+              io:format("Errror: Unable to open run log ~s (~s)~n", [FileName, Reason])
+    end.
 
 
 code_change(_OldVsn, State, _Extra) ->
