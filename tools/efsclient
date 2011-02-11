@@ -7,7 +7,7 @@ ERL=$HOME/bin/erl
 EBIN=$HOME/src/fs_walker/ebin
 WORKER_NAME=worker
 
-OUTDIR=/gscratch1/raballa/data
+OUTDIR=/gscratch2/raballa/data
 
 if [ -r .efswalkrc ]; then
     . .efswalkrc

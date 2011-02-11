@@ -24,7 +24,7 @@ OPT_CLIENT=""
 CONFIG_FILE=$PWD/fsw
 OPT_NOSHELL=""
 MASTER_NAME=master
-OUT_DIR=/gscratch1/raballa/data
+OUTDIR=/gscratch2/raballa/data
 
 if [ -r .efswalkrc ]; then
     . .efswalkrc
@@ -98,7 +98,7 @@ if [ -n "$ROOT_DIR" ]; then
     OPT_SERVER="$OPT_SERVER -fs_server directory \"$ROOT_DIR\""
 fi
 
-#/bin/rm -f $OUT_DIR/*.out fsw.log fsw_sasl.log
+#/bin/rm -f $OUTDIR/*.out fsw.log fsw_sasl.log
 
 $ERL -pa $EBIN $OPT_NOSHELL -boot start_sasl -config $CONFIG_FILE -sname $MASTER_NAME -s fsw_toplevel start $OPT_MASTER $OPT_SERVER $OPT_CLIENT 
 
